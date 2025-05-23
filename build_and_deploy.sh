@@ -31,15 +31,27 @@ else
     echo "No Mattermost process found running"
 fi
 
-echo "Checking for pre-built webapp..."
+echo "Building webapp..."
+cd webapp/channels
+
+# Node.js 의존성 설치
+if [ ! -d "node_modules" ]; then
+    echo "Installing Node.js dependencies..."
+    npm install
+fi
+
+# 웹앱 빌드
+echo "Building webapp files..."
+npm run build
+
+cd $MATTERMOST_ROOT
+
+echo "Checking for built webapp..."
 if [ -d "webapp/channels/dist" ]; then
-    echo "Found pre-built webapp files in dist directory"
-    cd $MATTERMOST_ROOT
+    echo "Found built webapp files in dist directory"
     echo "Copying dist files to client directory..."
- else
-    echo "Warning: Pre-built webapp files not found in dist directory"
-    echo "In an offline environment, you need to bring pre-built dist files"
-    echo "Please ensure webapp/channels/dist directory exists with built files"
+else
+    echo "Error: Build failed - dist directory not found"
     exit 1
 fi
 # client 디렉토리 생성 (없는 경우)
@@ -48,8 +60,9 @@ mkdir -p client
 if [ -d "client" ] && [ "$(ls -A client)" ]; then
     mv client client_backup_$(date +%Y%m%d_%H%M%S)
 fi
-# dist 파일들을 client 디렉토리로 직접 복사
+# dist 파일들과 root.html을 client 디렉토리로 직접 복사
 cp -rv webapp/channels/dist/* client/
+cp -v webapp/channels/src/root.html client/
 
 echo "Starting Mattermost server..."
 cd $MATTERMOST_ROOT

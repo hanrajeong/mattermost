@@ -78,7 +78,7 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
     const inviteId = params.get('id') ?? '';
     const data = params.get('d');
     const parsedData: Record<string, string> = data ? JSON.parse(data) : {};
-    const {email: parsedEmail, name: parsedTeamName, reminder_interval: reminderInterval} = parsedData;
+    const {email: parsedEmail, employeeId: parsedEmployeeId, name: parsedTeamName, reminder_interval: reminderInterval} = parsedData;
 
     const config = useSelector(getConfig);
     const {
@@ -129,7 +129,7 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
 
     const noOpenServer = !inviteId && !token && !enableOpenServer && !noAccounts && !enableUserCreation;
 
-    const [email, setEmail] = useState(parsedEmail ?? '');
+    const [email, setEmail] = useState(parsedEmployeeId ?? parsedEmail ?? '');
     const [name, setName] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(Boolean(inviteId));
@@ -769,6 +769,7 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
         if (emailError) {
             emailCustomLabelForInput = {type: ItemStatus.ERROR, value: emailError};
         }
+
 
         return (
             <>
