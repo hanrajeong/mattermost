@@ -31,12 +31,17 @@ else
     echo "No Mattermost process found running"
 fi
 
-echo "Building webapp..."
-cd $MATTERMOST_ROOT/webapp
-npm run build
-
-echo "Copying dist files to client directory..."
-cd $MATTERMOST_ROOT
+echo "Checking for pre-built webapp..."
+if [ -d "webapp/channels/dist" ]; then
+    echo "Found pre-built webapp files in dist directory"
+    cd $MATTERMOST_ROOT
+    echo "Copying dist files to client directory..."
+ else
+    echo "Warning: Pre-built webapp files not found in dist directory"
+    echo "In an offline environment, you need to bring pre-built dist files"
+    echo "Please ensure webapp/channels/dist directory exists with built files"
+    exit 1
+fi
 # client 디렉토리 생성 (없는 경우)
 mkdir -p client
 # 기존 파일 백업 (옵션)
@@ -44,7 +49,7 @@ if [ -d "client" ] && [ "$(ls -A client)" ]; then
     mv client client_backup_$(date +%Y%m%d_%H%M%S)
 fi
 # dist 파일들을 client 디렉토리로 직접 복사
-cp -rv $MATTERMOST_ROOT/webapp/channels/dist/* $MATTERMOST_ROOT/client/
+cp -rv webapp/channels/dist/* client/
 
 echo "Starting Mattermost server..."
 cd $MATTERMOST_ROOT
