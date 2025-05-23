@@ -67,6 +67,7 @@ func TestPrintMap(t *testing.T) {
 			if !reflect.DeepEqual(slice1, slice2) {
 				t.Errorf("got '%#v' want '%#v", slice1, slice2)
 			}
+
 		})
 	}
 }

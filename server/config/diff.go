@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/mattermost/mattermost/server/public/model"
+	"github.com/mattermost/mattermost-server/v6/model"
 )
 
 type ConfigDiffs []ConfigDiff
@@ -18,20 +18,20 @@ type ConfigDiff struct {
 	ActualVal any    `json:"actual_val"`
 }
 
-func (c *ConfigDiff) Auditable() map[string]any {
-	return map[string]any{
+func (c *ConfigDiff) Auditable() map[string]interface{} {
+	return map[string]interface{}{
 		"path":       c.Path,
 		"base_val":   c.BaseVal,
 		"actual_val": c.ActualVal,
 	}
 }
 
-func (cd *ConfigDiffs) Auditable() map[string]any {
-	var s []any
+func (cd *ConfigDiffs) Auditable() map[string]interface{} {
+	var s []interface{}
 	for _, d := range cd.Sanitize() {
 		s = append(s, d.Auditable())
 	}
-	return map[string]any{
+	return map[string]interface{}{
 		"config_diffs": s,
 	}
 }
@@ -53,6 +53,7 @@ var configSensitivePaths = map[string]bool{
 	"MessageExportSettings.GlobalRelaySettings.SMTPUsername": true,
 	"MessageExportSettings.GlobalRelaySettings.SMTPPassword": true,
 	"MessageExportSettings.GlobalRelaySettings.EmailAddress": true,
+	"ServiceSettings.GfycatAPISecret":                        true,
 	"ServiceSettings.SplitKey":                               true,
 	"PluginSettings.Plugins":                                 true,
 }
@@ -60,24 +61,21 @@ var configSensitivePaths = map[string]bool{
 // Sanitize replaces sensitive config values in the diff with asterisks filled strings.
 func (cd ConfigDiffs) Sanitize() ConfigDiffs {
 	if len(cd) == 1 {
-		// PluginSettings.Plugins gets sanitized anyway, so there is no need to use the plugin manifests here.
-		var pluginManifests []*model.Manifest
-
 		cfgPtr, ok := cd[0].BaseVal.(*model.Config)
 		if ok {
-			cfgPtr.Sanitize(pluginManifests)
+			cfgPtr.Sanitize()
 		}
 		cfgPtr, ok = cd[0].ActualVal.(*model.Config)
 		if ok {
-			cfgPtr.Sanitize(pluginManifests)
+			cfgPtr.Sanitize()
 		}
 		cfgVal, ok := cd[0].BaseVal.(model.Config)
 		if ok {
-			cfgVal.Sanitize(pluginManifests)
+			cfgVal.Sanitize()
 		}
 		cfgVal, ok = cd[0].ActualVal.(model.Config)
 		if ok {
-			cfgVal.Sanitize(pluginManifests)
+			cfgVal.Sanitize()
 		}
 	}
 

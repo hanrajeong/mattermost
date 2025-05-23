@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/mattermost/mattermost/server/public/model"
-	"github.com/mattermost/mattermost/server/public/shared/mlog"
-	"github.com/mattermost/mattermost/server/v8/channels/utils/fileutils"
+	"github.com/mattermost/mattermost-server/v6/model"
+	"github.com/mattermost/mattermost-server/v6/shared/mlog"
+	"github.com/mattermost/mattermost-server/v6/utils/fileutils"
 )
 
 const (
@@ -122,7 +122,7 @@ func GetLogSettingsFromNotificationsLogSettings(notificationLogSettings *model.N
 	settings.FileJson = notificationLogSettings.FileJson
 	settings.FileLevel = notificationLogSettings.FileLevel
 	settings.FileLocation = notificationLogSettings.FileLocation
-	settings.AdvancedLoggingJSON = notificationLogSettings.AdvancedLoggingJSON
+	settings.AdvancedLoggingConfig = notificationLogSettings.AdvancedLoggingConfig
 	settings.EnableColor = notificationLogSettings.EnableColor
 	return settings
 }

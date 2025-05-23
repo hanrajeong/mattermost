@@ -10,10 +10,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/mattermost/mattermost/server/public/shared/request"
-	"github.com/mattermost/mattermost/server/v8/channels/app"
-	"github.com/mattermost/mattermost/server/v8/channels/audit"
-	"github.com/mattermost/mattermost/server/v8/config"
+	"github.com/mattermost/mattermost-server/v6/app"
+	"github.com/mattermost/mattermost-server/v6/audit"
+	"github.com/mattermost/mattermost-server/v6/config"
+	"github.com/mattermost/mattermost-server/v6/shared/mlog"
 )
 
 var JobserverCmd = &cobra.Command{
@@ -43,11 +43,9 @@ func jobserverCmdF(command *cobra.Command, args []string) error {
 
 	a.Srv().LoadLicense()
 
-	rctx := request.EmptyContext(a.Log())
-
 	// Run jobs
-	rctx.Logger().Info("Starting Mattermost job server")
-	defer rctx.Logger().Info("Stopped Mattermost job server")
+	mlog.Info("Starting Mattermost job server")
+	defer mlog.Info("Stopped Mattermost job server")
 
 	if !noJobs {
 		a.Srv().Jobs.StartWorkers()
@@ -59,8 +57,8 @@ func jobserverCmdF(command *cobra.Command, args []string) error {
 	}
 
 	if !noJobs || !noSchedule {
-		auditRec := a.MakeAuditRecord(rctx, "jobServer", audit.Success)
-		a.LogAuditRec(rctx, auditRec, nil)
+		auditRec := a.MakeAuditRecord("jobServer", audit.Success)
+		a.LogAuditRec(auditRec, nil)
 	}
 
 	signalChan := make(chan os.Signal, 1)
@@ -68,7 +66,7 @@ func jobserverCmdF(command *cobra.Command, args []string) error {
 	<-signalChan
 
 	// Cleanup anything that isn't handled by a defer statement
-	rctx.Logger().Info("Stopping Mattermost job server")
+	mlog.Info("Stopping Mattermost job server")
 
 	return nil
 }

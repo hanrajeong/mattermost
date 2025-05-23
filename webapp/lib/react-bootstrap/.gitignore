@@ -1,0 +1,11 @@
+*~
+.DS_Store
+npm-debug.log*
+node_modules
+!tools/amd/
+!tools/lib/
+!tools/es/
+!tools/dist/
+tmp-*-repo/
+.babel-cache/
+coverage/

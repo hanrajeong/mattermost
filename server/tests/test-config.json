@@ -47,7 +47,6 @@
         "EnableEmojiPicker": true,
         "PostEditTimeLimit": -1,
         "TimeBetweenUserTypingUpdatesMilliseconds": 5000,
-        "EnableCrossTeamSearch": true,
         "EnablePostSearch": true,
         "MinimumHashtagLength": 3,
         "EnableUserTypingMessages": true,
@@ -55,6 +54,7 @@
         "EnableUserStatuses": true,
         "ExperimentalEnableAuthenticationTransfer": true,
         "ClusterLogTimeoutMilliseconds": 2000,
+        "EnablePreviewFeatures": true,
         "EnableTutorial": true,
         "EnableOnboardingFlow": true,
         "ExperimentalEnableDefaultChannelLeaveJoinMessages": true,
@@ -90,7 +90,7 @@
     },
     "SqlSettings": {
         "DriverName": "mysql",
-        "DataSource": "mmuser:mostest@tcp(localhost:3306)/mattermost_test?charset=utf8mb4\u0026readTimeout=30s\u0026writeTimeout=30s\u0026maxAllowedPacket=4194304",
+        "DataSource": "mmuser:mostest@tcp(localhost:3306)/mattermost_test?charset=utf8mb4,utf8\u0026readTimeout=30s\u0026writeTimeout=30s",
         "DataSourceReplicas": [],
         "DataSourceSearchReplicas": [],
         "MaxIdleConns": 20,
@@ -115,8 +115,7 @@
         "Lowercase": false,
         "Number": false,
         "Uppercase": false,
-        "Symbol": false,
-        "EnableForgotLink": true
+        "Symbol": false
     },
     "FileSettings": {
         "EnableFileAttachments": true,
@@ -137,8 +136,7 @@
         "AmazonS3SSL": true,
         "AmazonS3SignV2": false,
         "AmazonS3SSE": false,
-        "AmazonS3Trace": false,
-        "AmazonS3StorageClass": ""
+        "AmazonS3Trace": false
     },
     "EmailSettings": {
         "EnableSignUpWithEmail": true,
@@ -168,7 +166,8 @@
         "EmailNotificationContentsType": "full",
         "LoginButtonColor": "",
         "LoginButtonBorderColor": "",
-        "LoginButtonTextColor": ""
+        "LoginButtonTextColor": "",
+        "EnableInactivityEmail": true
     },
     "RateLimitSettings": {
         "Enable": false,
@@ -184,13 +183,11 @@
         "ShowFullName": true
     },
     "SupportSettings": {
-        "TermsOfServiceLink": "https://mattermost.com/pl/terms-of-use/",
-        "PrivacyPolicyLink": "https://mattermost.com/pl/privacy-policy/",
+        "TermsOfServiceLink": "https://mattermost.com/terms-of-use/",
+        "PrivacyPolicyLink": "https://mattermost.com/privacy-policy/",
         "AboutLink": "https://mattermost.com/default-about/",
-        "HelpLink": "https://mattermost.com/pl/help/",
-        "ReportAProblemLink": "https://mattermost.com/pl/report-a-bug",
-        "ReportAProblemType": "link",
-        "ForgotPasswordLink": "",
+        "HelpLink": "https://mattermost.com/default-help/",
+        "ReportAProblemLink": "https://mattermost.com/default-report-a-problem/",
         "SupportEmail": "feedback@mattermost.com"
     },
     "AnnouncementSettings": {
@@ -299,8 +296,8 @@
     },
     "NativeAppSettings": {
         "AppDownloadLink": "https://mattermost.com/download/",
-        "AndroidAppDownloadLink": "https://mattermost.com/pl/android-app/",
-        "IosAppDownloadLink": "https://mattermost.com/pl/ios-app/"
+        "AndroidAppDownloadLink": "https://mattermost.com/mattermost-android-app/",
+        "IosAppDownloadLink": "https://mattermost.com/mattermost-ios-app/"
     },
     "ClusterSettings": {
         "Enable": false,
@@ -309,7 +306,11 @@
         "UseIPAddress": true,
         "UseExperimentalGossip": true,
         "ReadOnlyConfig": true,
-        "GossipPort": 8074
+        "GossipPort": 8074,
+        "StreamingPort": 8075,
+        "MaxIdleConns": 100,
+        "MaxIdleConnsPerHost": 128,
+        "IdleConnTimeoutMilliseconds": 90000
     },
     "MetricsSettings": {
         "Enable": false,
@@ -325,7 +326,6 @@
     },
     "ElasticsearchSettings": {
         "ConnectionUrl": "http://localhost:9200",
-        "Backend": "elasticsearch",
         "Username": "elastic",
         "Password": "changeme",
         "EnableIndexing": false,
@@ -385,6 +385,7 @@
         }
     },
     "DisplaySettings": {
-        "CustomUrlSchemes": []
+        "CustomUrlSchemes": [],
+        "ExperimentalTimezone": false
     }
 }

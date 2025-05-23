@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/mattermost/mattermost/server/public/model"
+	"github.com/mattermost/mattermost-server/v6/model"
 )
 
 func TestGetClientConfig(t *testing.T) {
@@ -25,16 +25,16 @@ func TestGetClientConfig(t *testing.T) {
 			"unlicensed",
 			&model.Config{
 				EmailSettings: model.EmailSettings{
-					EmailNotificationContentsType: model.NewPointer(model.EmailNotificationContentsFull),
+					EmailNotificationContentsType: model.NewString(model.EmailNotificationContentsFull),
 				},
 				ThemeSettings: model.ThemeSettings{
 					// Ignored, since not licensed.
-					AllowCustomThemes: model.NewPointer(false),
+					AllowCustomThemes: model.NewBool(false),
 				},
 				ServiceSettings: model.ServiceSettings{
-					WebsocketURL:        model.NewPointer("ws://mattermost.example.com:8065"),
-					WebsocketPort:       model.NewPointer(80),
-					WebsocketSecurePort: model.NewPointer(443),
+					WebsocketURL:        model.NewString("ws://mattermost.example.com:8065"),
+					WebsocketPort:       model.NewInt(80),
+					WebsocketSecurePort: model.NewInt(443),
 				},
 			},
 			"",
@@ -53,17 +53,17 @@ func TestGetClientConfig(t *testing.T) {
 			"licensed, but not for theme management",
 			&model.Config{
 				EmailSettings: model.EmailSettings{
-					EmailNotificationContentsType: model.NewPointer(model.EmailNotificationContentsFull),
+					EmailNotificationContentsType: model.NewString(model.EmailNotificationContentsFull),
 				},
 				ThemeSettings: model.ThemeSettings{
 					// Ignored, since not licensed.
-					AllowCustomThemes: model.NewPointer(false),
+					AllowCustomThemes: model.NewBool(false),
 				},
 			},
 			"tag1",
 			&model.License{
 				Features: &model.Features{
-					ThemeManagement: model.NewPointer(false),
+					ThemeManagement: model.NewBool(false),
 				},
 			},
 			map[string]string{
@@ -76,16 +76,16 @@ func TestGetClientConfig(t *testing.T) {
 			"licensed for theme management",
 			&model.Config{
 				EmailSettings: model.EmailSettings{
-					EmailNotificationContentsType: model.NewPointer(model.EmailNotificationContentsFull),
+					EmailNotificationContentsType: model.NewString(model.EmailNotificationContentsFull),
 				},
 				ThemeSettings: model.ThemeSettings{
-					AllowCustomThemes: model.NewPointer(false),
+					AllowCustomThemes: model.NewBool(false),
 				},
 			},
 			"tag2",
 			&model.License{
 				Features: &model.Features{
-					ThemeManagement: model.NewPointer(true),
+					ThemeManagement: model.NewBool(true),
 				},
 			},
 			map[string]string{
@@ -98,13 +98,13 @@ func TestGetClientConfig(t *testing.T) {
 			"licensed for enforcement",
 			&model.Config{
 				ServiceSettings: model.ServiceSettings{
-					EnforceMultifactorAuthentication: model.NewPointer(true),
+					EnforceMultifactorAuthentication: model.NewBool(true),
 				},
 			},
 			"tag1",
 			&model.License{
 				Features: &model.Features{
-					MFA: model.NewPointer(true),
+					MFA: model.NewBool(true),
 				},
 			},
 			map[string]string{
@@ -115,7 +115,7 @@ func TestGetClientConfig(t *testing.T) {
 			"default marketplace",
 			&model.Config{
 				PluginSettings: model.PluginSettings{
-					MarketplaceURL: model.NewPointer(model.PluginSettingsDefaultMarketplaceURL),
+					MarketplaceURL: model.NewString(model.PluginSettingsDefaultMarketplaceURL),
 				},
 			},
 			"tag1",
@@ -128,7 +128,7 @@ func TestGetClientConfig(t *testing.T) {
 			"non-default marketplace",
 			&model.Config{
 				PluginSettings: model.PluginSettings{
-					MarketplaceURL: model.NewPointer("http://example.com"),
+					MarketplaceURL: model.NewString("http://example.com"),
 				},
 			},
 			"tag1",
@@ -141,13 +141,77 @@ func TestGetClientConfig(t *testing.T) {
 			"enable ShowFullName prop",
 			&model.Config{
 				PrivacySettings: model.PrivacySettings{
-					ShowFullName: model.NewPointer(true),
+					ShowFullName: model.NewBool(true),
 				},
 			},
 			"tag1",
 			nil,
 			map[string]string{
 				"ShowFullName": "true",
+			},
+		},
+		{
+			"Insights professional license",
+			&model.Config{
+				FeatureFlags: &model.FeatureFlags{
+					InsightsEnabled: true,
+				},
+			},
+			"",
+			&model.License{
+				Features:     &model.Features{},
+				SkuShortName: model.LicenseShortSkuProfessional,
+			},
+			map[string]string{
+				"InsightsEnabled": "true",
+			},
+		},
+		{
+			"Insights enterprise license",
+			&model.Config{
+				FeatureFlags: &model.FeatureFlags{
+					InsightsEnabled: true,
+				},
+			},
+			"",
+			&model.License{
+				Features:     &model.Features{},
+				SkuShortName: model.LicenseShortSkuEnterprise,
+			},
+			map[string]string{
+				"InsightsEnabled": "true",
+			},
+		},
+		{
+			"Insights other license",
+			&model.Config{
+				FeatureFlags: &model.FeatureFlags{
+					InsightsEnabled: true,
+				},
+			},
+			"",
+			&model.License{
+				Features:     &model.Features{},
+				SkuShortName: "other",
+			},
+			map[string]string{
+				"InsightsEnabled": "true",
+			},
+		},
+		{
+			"Insights professional license, feature flag disabled",
+			&model.Config{
+				FeatureFlags: &model.FeatureFlags{
+					InsightsEnabled: false,
+				},
+			},
+			"",
+			&model.License{
+				Features:     &model.Features{},
+				SkuShortName: model.LicenseShortSkuProfessional,
+			},
+			map[string]string{
+				"InsightsEnabled": "false",
 			},
 		},
 		{
@@ -176,7 +240,11 @@ func TestGetClientConfig(t *testing.T) {
 		},
 		{
 			"Custom groups other license",
-			&model.Config{},
+			&model.Config{
+				FeatureFlags: &model.FeatureFlags{
+					InsightsEnabled: true,
+				},
+			},
 			"",
 			&model.License{
 				Features:     &model.Features{},
@@ -189,14 +257,14 @@ func TestGetClientConfig(t *testing.T) {
 		{
 			"Shared channels other license",
 			&model.Config{
-				ConnectedWorkspacesSettings: model.ConnectedWorkspacesSettings{
-					EnableSharedChannels: model.NewPointer(true),
+				ExperimentalSettings: model.ExperimentalSettings{
+					EnableSharedChannels: model.NewBool(true),
 				},
 			},
 			"",
 			&model.License{
 				Features: &model.Features{
-					SharedChannels: model.NewPointer(false),
+					SharedChannels: model.NewBool(false),
 				},
 				SkuShortName: "other",
 			},
@@ -207,14 +275,14 @@ func TestGetClientConfig(t *testing.T) {
 		{
 			"licensed for shared channels",
 			&model.Config{
-				ConnectedWorkspacesSettings: model.ConnectedWorkspacesSettings{
-					EnableSharedChannels: model.NewPointer(true),
+				ExperimentalSettings: model.ExperimentalSettings{
+					EnableSharedChannels: model.NewBool(true),
 				},
 			},
 			"",
 			&model.License{
 				Features: &model.Features{
-					SharedChannels: model.NewPointer(true),
+					SharedChannels: model.NewBool(true),
 				},
 				SkuShortName: "other",
 			},
@@ -225,14 +293,14 @@ func TestGetClientConfig(t *testing.T) {
 		{
 			"Shared channels professional license",
 			&model.Config{
-				ConnectedWorkspacesSettings: model.ConnectedWorkspacesSettings{
-					EnableSharedChannels: model.NewPointer(true),
+				ExperimentalSettings: model.ExperimentalSettings{
+					EnableSharedChannels: model.NewBool(true),
 				},
 			},
 			"",
 			&model.License{
 				Features: &model.Features{
-					SharedChannels: model.NewPointer(false),
+					SharedChannels: model.NewBool(false),
 				},
 				SkuShortName: model.LicenseShortSkuProfessional,
 			},
@@ -241,29 +309,16 @@ func TestGetClientConfig(t *testing.T) {
 			},
 		},
 		{
-			"disable EnableUserStatuses",
-			&model.Config{
-				ServiceSettings: model.ServiceSettings{
-					EnableUserStatuses: model.NewPointer(false),
-				},
-			},
-			"",
-			nil,
-			map[string]string{
-				"EnableUserStatuses": "false",
-			},
-		},
-		{
 			"Shared channels enterprise license",
 			&model.Config{
-				ConnectedWorkspacesSettings: model.ConnectedWorkspacesSettings{
-					EnableSharedChannels: model.NewPointer(true),
+				ExperimentalSettings: model.ExperimentalSettings{
+					EnableSharedChannels: model.NewBool(true),
 				},
 			},
 			"",
 			&model.License{
 				Features: &model.Features{
-					SharedChannels: model.NewPointer(false),
+					SharedChannels: model.NewBool(false),
 				},
 				SkuShortName: model.LicenseShortSkuEnterprise,
 			},
@@ -271,76 +326,10 @@ func TestGetClientConfig(t *testing.T) {
 				"ExperimentalSharedChannels": "true",
 			},
 		},
-		{
-			"Disable App Bar",
-			&model.Config{
-				ExperimentalSettings: model.ExperimentalSettings{
-					DisableAppBar: model.NewPointer(true),
-				},
-			},
-			"",
-			nil,
-			map[string]string{
-				"DisableAppBar": "true",
-			},
-		},
-		{
-			"default EnableJoinLeaveMessage",
-			&model.Config{},
-			"tag1",
-			nil,
-			map[string]string{
-				"EnableJoinLeaveMessageByDefault": "true",
-			},
-		},
-		{
-			"disable EnableJoinLeaveMessage",
-			&model.Config{
-				TeamSettings: model.TeamSettings{
-					EnableJoinLeaveMessageByDefault: model.NewPointer(false),
-				},
-			},
-			"tag1",
-			nil,
-			map[string]string{
-				"EnableJoinLeaveMessageByDefault": "false",
-			},
-		},
-		{
-			"test key for GiphySdkKey",
-			&model.Config{
-				ServiceSettings: model.ServiceSettings{
-					GiphySdkKey: model.NewPointer(""),
-				},
-			},
-			"",
-			nil,
-			map[string]string{
-				"GiphySdkKey": model.ServiceSettingsDefaultGiphySdkKeyTest,
-			},
-		},
-		{
-			"report a problem values",
-			&model.Config{
-				SupportSettings: model.SupportSettings{
-					ReportAProblemType: model.NewPointer("type"),
-					ReportAProblemLink: model.NewPointer("http://example.com"),
-					ReportAProblemMail: model.NewPointer("mail"),
-					AllowDownloadLogs:  model.NewPointer(true),
-				},
-			},
-			"",
-			nil,
-			map[string]string{
-				"ReportAProblemType": "type",
-				"ReportAProblemLink": "http://example.com",
-				"ReportAProblemMail": "mail",
-				"AllowDownloadLogs":  "true",
-			},
-		},
 	}
 
 	for _, testCase := range testCases {
+		testCase := testCase
 		t.Run(testCase.description, func(t *testing.T) {
 			t.Parallel()
 
@@ -373,16 +362,16 @@ func TestGetLimitedClientConfig(t *testing.T) {
 			"unlicensed",
 			&model.Config{
 				EmailSettings: model.EmailSettings{
-					EmailNotificationContentsType: model.NewPointer(model.EmailNotificationContentsFull),
+					EmailNotificationContentsType: model.NewString(model.EmailNotificationContentsFull),
 				},
 				ThemeSettings: model.ThemeSettings{
 					// Ignored, since not licensed.
-					AllowCustomThemes: model.NewPointer(false),
+					AllowCustomThemes: model.NewBool(false),
 				},
 				ServiceSettings: model.ServiceSettings{
-					WebsocketURL:        model.NewPointer("ws://mattermost.example.com:8065"),
-					WebsocketPort:       model.NewPointer(80),
-					WebsocketSecurePort: model.NewPointer(443),
+					WebsocketURL:        model.NewString("ws://mattermost.example.com:8065"),
+					WebsocketPort:       model.NewInt(80),
+					WebsocketSecurePort: model.NewInt(443),
 				},
 			},
 			"",
@@ -399,11 +388,11 @@ func TestGetLimitedClientConfig(t *testing.T) {
 			"password settings",
 			&model.Config{
 				PasswordSettings: model.PasswordSettings{
-					MinimumLength: model.NewPointer(15),
-					Lowercase:     model.NewPointer(true),
-					Uppercase:     model.NewPointer(true),
-					Number:        model.NewPointer(true),
-					Symbol:        model.NewPointer(false),
+					MinimumLength: model.NewInt(15),
+					Lowercase:     model.NewBool(true),
+					Uppercase:     model.NewBool(true),
+					Number:        model.NewBool(true),
+					Symbol:        model.NewBool(false),
 				},
 			},
 			"",
@@ -432,6 +421,7 @@ func TestGetLimitedClientConfig(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
+		testCase := testCase
 		t.Run(testCase.description, func(t *testing.T) {
 			t.Parallel()
 

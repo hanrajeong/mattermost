@@ -8,10 +8,11 @@ import (
 	"os"
 	"strings"
 
-	"gopkg.in/yaml.v3"
+	"gopkg.in/yaml.v2"
 )
 
 type DockerCompose struct {
+	Version  string                `yaml:"version"`
 	Services map[string]*Container `yaml:"services"`
 }
 
@@ -30,14 +31,10 @@ func main() {
 		"inbucket":           9001,
 		"openldap":           389,
 		"elasticsearch":      9200,
-		"opensearch":         9201,
-		"redis":              6379,
 		"dejavu":             1358,
 		"keycloak":           8080,
 		"prometheus":         9090,
 		"grafana":            3000,
-		"loki":               3100,
-		"promtail":           3180,
 		"mysql-read-replica": 3306, // FIXME: not recognizing the successfully running service on port 3307.
 	}
 	command := []string{}
@@ -50,6 +47,7 @@ func main() {
 	}
 
 	var dockerCompose DockerCompose
+	dockerCompose.Version = "2.4"
 	dockerCompose.Services = map[string]*Container{}
 	dockerCompose.Services["start_dependencies"] = &Container{
 		Image:     "mattermost/mattermost-wait-for-dep:latest",

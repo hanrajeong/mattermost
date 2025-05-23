@@ -1,11 +1,11 @@
 #!/bin/bash
 
 total=0
-MAX_WAIT_SECONDS="${MAX_WAIT_SECONDS:=60}"
+max_wait_seconds=60
 
-echo "waiting $MAX_WAIT_SECONDS seconds for the server to start"
+echo "waiting $max_wait_seconds seconds for the server to start"
 
-while [[ "$total" -le "$MAX_WAIT_SECONDS" ]]; do
+while [[ "$total" -le "$max_wait_seconds" ]]; do
     if bin/mmctl system status --local 2> /dev/null; then
         exit 0
     else
@@ -15,6 +15,6 @@ while [[ "$total" -le "$MAX_WAIT_SECONDS" ]]; do
     fi
 done
 
-printf "\nserver didn't start in $MAX_WAIT_SECONDS seconds\n"
+printf "\nserver didn't start in $max_wait_seconds seconds\n"
 
 exit 1

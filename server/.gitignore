@@ -10,17 +10,21 @@ npm-debug.log
 webapp/yarn-error.log
 mattermost.mattermost-license
 config/mattermost.mattermost-license
-config/config*.json
+config/config.json
 config/*.crt
-config/*.key
 
 web/static/js/bundle*.js
 web/static/js/bundle*.js.map
 web/static/js/libs*.js
 
 config/active.dat
+config/config.json
 config/logging.json
 /plugins
+
+# Enterprise & products imports files
+imports/imports.go
+imports/boards_imports.go
 
 # go.work file
 go.work
@@ -102,14 +106,14 @@ api/data/*
 api4/data/*
 app/data/*
 
+enterprise
+
 cover.out
 ecover.out
-mmctlcover.out
 cprofile.out
 *.test
 webapp/coverage
 /report.xml
-/gotestsum.json
 
 .agignore
 .ctags
@@ -120,7 +124,6 @@ webapp/coverage
 /client
 __debug_bin
 report.xml
-*coverage.txt
 go.*.orig
 config.override.mk
 docker-compose.override.yaml

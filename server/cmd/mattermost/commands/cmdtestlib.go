@@ -17,13 +17,13 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/mattermost/mattermost/server/public/model"
-	"github.com/mattermost/mattermost/server/v8/channels/api4"
-	"github.com/mattermost/mattermost/server/v8/channels/store/storetest/mocks"
-	"github.com/mattermost/mattermost/server/v8/channels/testlib"
+	"github.com/mattermost/mattermost-server/v6/api4"
+	"github.com/mattermost/mattermost-server/v6/model"
+	"github.com/mattermost/mattermost-server/v6/store/storetest/mocks"
+	"github.com/mattermost/mattermost-server/v6/testlib"
 )
 
-var coverprofileCounters = make(map[string]int)
+var coverprofileCounters map[string]int = make(map[string]int)
 
 var mainHelper *testlib.MainHelper
 
@@ -37,13 +37,13 @@ type testHelper struct {
 }
 
 // Setup creates an instance of testHelper.
-func Setup(tb testing.TB) *testHelper {
+func Setup(t testing.TB) *testHelper {
 	dir, err := testlib.SetupTestResources()
 	if err != nil {
 		panic("failed to create temporary directory: " + err.Error())
 	}
 
-	api4TestHelper := api4.Setup(tb)
+	api4TestHelper := api4.Setup(t)
 
 	testHelper := &testHelper{
 		TestHelper:     api4TestHelper,
@@ -59,13 +59,13 @@ func Setup(tb testing.TB) *testHelper {
 }
 
 // Setup creates an instance of testHelper.
-func SetupWithStoreMock(tb testing.TB) *testHelper {
+func SetupWithStoreMock(t testing.TB) *testHelper {
 	dir, err := testlib.SetupTestResources()
 	if err != nil {
 		panic("failed to create temporary directory: " + err.Error())
 	}
 
-	api4TestHelper := api4.SetupWithStoreMock(tb)
+	api4TestHelper := api4.SetupWithStoreMock(t)
 	systemStore := mocks.SystemStore{}
 	systemStore.On("Get").Return(make(model.StringMap), nil)
 	licenseStore := mocks.LicenseStore{}

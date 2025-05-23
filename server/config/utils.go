@@ -10,10 +10,10 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/mattermost/mattermost/server/public/model"
-	"github.com/mattermost/mattermost/server/public/shared/i18n"
-	"github.com/mattermost/mattermost/server/public/shared/mlog"
-	"github.com/mattermost/mattermost/server/v8/channels/utils"
+	"github.com/mattermost/mattermost-server/v6/model"
+	"github.com/mattermost/mattermost-server/v6/shared/i18n"
+	"github.com/mattermost/mattermost-server/v6/shared/mlog"
+	"github.com/mattermost/mattermost-server/v6/utils"
 )
 
 // marshalConfig converts the given configuration into JSON bytes for persistence.
@@ -85,16 +85,12 @@ func desanitize(actual, target *model.Config) {
 		*target.MessageExportSettings.GlobalRelaySettings.SMTPPassword = *actual.MessageExportSettings.GlobalRelaySettings.SMTPPassword
 	}
 
-	if *target.ServiceSettings.SplitKey == model.FakeSetting {
-		*target.ServiceSettings.SplitKey = *actual.ServiceSettings.SplitKey
+	if target.ServiceSettings.GfycatAPISecret != nil && *target.ServiceSettings.GfycatAPISecret == model.FakeSetting {
+		*target.ServiceSettings.GfycatAPISecret = *actual.ServiceSettings.GfycatAPISecret
 	}
 
-	for id, settings := range target.PluginSettings.Plugins {
-		for k, v := range settings {
-			if v == model.FakeSetting {
-				settings[k] = actual.PluginSettings.Plugins[id][k]
-			}
-		}
+	if *target.ServiceSettings.SplitKey == model.FakeSetting {
+		*target.ServiceSettings.SplitKey = *actual.ServiceSettings.SplitKey
 	}
 }
 
@@ -112,23 +108,26 @@ func fixConfig(cfg *model.Config) {
 		}
 	}
 
-	fixInvalidLocales(cfg)
+	FixInvalidLocales(cfg)
 }
 
-// fixInvalidLocales checks and corrects the given config for invalid locale-related settings.
-func fixInvalidLocales(cfg *model.Config) bool {
+// FixInvalidLocales checks and corrects the given config for invalid locale-related settings.
+//
+// Ideally, this function would be completely internal, but it's currently exposed to allow the cli
+// to test the config change before allowing the save.
+func FixInvalidLocales(cfg *model.Config) bool {
 	var changed bool
 
 	locales := i18n.GetSupportedLocales()
 	if _, ok := locales[*cfg.LocalizationSettings.DefaultServerLocale]; !ok {
-		mlog.Warn("DefaultServerLocale must be one of the supported locales. Setting DefaultServerLocale to en as default value.", mlog.String("locale", *cfg.LocalizationSettings.DefaultServerLocale))
 		*cfg.LocalizationSettings.DefaultServerLocale = model.DefaultLocale
+		mlog.Warn("DefaultServerLocale must be one of the supported locales. Setting DefaultServerLocale to en as default value.")
 		changed = true
 	}
 
 	if _, ok := locales[*cfg.LocalizationSettings.DefaultClientLocale]; !ok {
-		mlog.Warn("DefaultClientLocale must be one of the supported locales. Setting DefaultClientLocale to en as default value.", mlog.String("locale", *cfg.LocalizationSettings.DefaultClientLocale))
 		*cfg.LocalizationSettings.DefaultClientLocale = model.DefaultLocale
+		mlog.Warn("DefaultClientLocale must be one of the supported locales. Setting DefaultClientLocale to en as default value.")
 		changed = true
 	}
 
@@ -165,7 +164,13 @@ func fixInvalidLocales(cfg *model.Config) bool {
 // Merge merges two configs together. The receiver's values are overwritten with the patch's
 // values except when the patch's values are nil.
 func Merge(cfg *model.Config, patch *model.Config, mergeConfig *utils.MergeConfig) (*model.Config, error) {
-	return utils.Merge(cfg, patch, mergeConfig)
+	ret, err := utils.Merge(cfg, patch, mergeConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	retCfg := ret.(model.Config)
+	return &retCfg, nil
 }
 
 func IsDatabaseDSN(dsn string) bool {
@@ -174,10 +179,9 @@ func IsDatabaseDSN(dsn string) bool {
 		strings.HasPrefix(dsn, "postgresql://")
 }
 
-func isJSONMap(data []byte) bool {
+func isJSONMap(data string) bool {
 	var m map[string]any
-	err := json.Unmarshal(data, &m)
-	return err == nil
+	return json.Unmarshal([]byte(data), &m) == nil
 }
 
 func GetValueByPath(path []string, obj any) (any, bool) {

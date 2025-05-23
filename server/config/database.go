@@ -15,8 +15,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	sqlUtils "github.com/mattermost/mattermost/server/public/utils/sql"
-
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 
@@ -25,10 +23,11 @@ import (
 	// Load the Postgres driver
 	_ "github.com/lib/pq"
 
+	"github.com/mattermost/mattermost-server/v6/model"
+	"github.com/mattermost/mattermost-server/v6/shared/mlog"
+	"github.com/mattermost/mattermost-server/v6/store/sqlstore"
 	"github.com/mattermost/morph"
 
-	"github.com/mattermost/mattermost/server/public/model"
-	"github.com/mattermost/mattermost/server/public/shared/mlog"
 	"github.com/mattermost/morph/drivers"
 	ms "github.com/mattermost/morph/drivers/mysql"
 	ps "github.com/mattermost/morph/drivers/postgres"
@@ -121,12 +120,12 @@ func (ds *DatabaseStore) initializeConfigurationsTable() error {
 	var driver drivers.Driver
 	switch ds.driverName {
 	case model.DatabaseDriverMysql:
-		dataSource, rErr := sqlUtils.ResetReadTimeout(ds.dataSourceName)
+		dataSource, rErr := sqlstore.ResetReadTimeout(ds.dataSourceName)
 		if rErr != nil {
 			return fmt.Errorf("failed to reset read timeout from datasource: %w", rErr)
 		}
 
-		dataSource, err = sqlUtils.AppendMultipleStatementsFlag(dataSource)
+		dataSource, err = sqlstore.AppendMultipleStatementsFlag(dataSource)
 		if err != nil {
 			return err
 		}
@@ -316,8 +315,8 @@ func (ds *DatabaseStore) Load() ([]byte, error) {
 	// Initialize from the default config if no active configuration could be found.
 	if len(configurationData) == 0 {
 		configWithDB := model.Config{}
-		configWithDB.SqlSettings.DriverName = model.NewPointer(ds.driverName)
-		configWithDB.SqlSettings.DataSource = model.NewPointer(ds.dataSourceName)
+		configWithDB.SqlSettings.DriverName = model.NewString(ds.driverName)
+		configWithDB.SqlSettings.DataSource = model.NewString(ds.dataSourceName)
 		return json.Marshal(configWithDB)
 	}
 
@@ -409,7 +408,7 @@ func (ds *DatabaseStore) RemoveFile(name string) error {
 func (ds *DatabaseStore) String() string {
 	// This is called during the running of MM, so we expect the parsing of DSN
 	// to be successful.
-	sanitized, _ := sqlUtils.SanitizeDataSource(ds.driverName, ds.originalDsn)
+	sanitized, _ := sqlstore.SanitizeDataSource(ds.driverName, ds.originalDsn)
 	return sanitized
 }
 

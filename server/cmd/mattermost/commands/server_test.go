@@ -11,12 +11,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/mattermost/mattermost/server/v8/channels/jobs"
-	"github.com/mattermost/mattermost/server/v8/config"
+	"github.com/mattermost/mattermost-server/v6/config"
+	"github.com/mattermost/mattermost-server/v6/jobs"
 )
 
 const (
-	unitTestListeningPort = "localhost:0"
+	unitTestListeningPort = ":0"
 )
 
 //nolint:golint,unused
@@ -27,9 +27,9 @@ type ServerTestHelper struct {
 }
 
 //nolint:golint,unused
-func SetupServerTest(tb testing.TB) *ServerTestHelper {
+func SetupServerTest(t testing.TB) *ServerTestHelper {
 	if testing.Short() {
-		tb.SkipNow()
+		t.SkipNow()
 	}
 	// Build a channel that will be used by the server to receive system signals...
 	interruptChan := make(chan os.Signal, 1)
@@ -65,7 +65,6 @@ func TestRunServerSuccess(t *testing.T) {
 	// Use non-default listening port in case another server instance is already running.
 	cfg := configStore.Get()
 	*cfg.ServiceSettings.ListenAddress = unitTestListeningPort
-	cfg.SqlSettings = *mainHelper.GetSQLSettings()
 	configStore.Set(cfg)
 
 	err := runServer(configStore, th.interruptChan)
@@ -118,7 +117,6 @@ func TestRunServerSystemdNotification(t *testing.T) {
 	// Use non-default listening port in case another server instance is already running.
 	cfg := configStore.Get()
 	*cfg.ServiceSettings.ListenAddress = unitTestListeningPort
-	cfg.SqlSettings = *mainHelper.GetSQLSettings()
 	configStore.Set(cfg)
 
 	// Start and stop the server
@@ -144,7 +142,6 @@ func TestRunServerNoSystemd(t *testing.T) {
 	// Use non-default listening port in case another server instance is already running.
 	cfg := configStore.Get()
 	*cfg.ServiceSettings.ListenAddress = unitTestListeningPort
-	cfg.SqlSettings = *mainHelper.GetSQLSettings()
 	configStore.Set(cfg)
 
 	err := runServer(configStore, th.interruptChan)

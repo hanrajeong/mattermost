@@ -1,1 +1,1 @@
-https://mattermost.com/pl/privacy-policy/
+https://mattermost.com/privacy-policy/

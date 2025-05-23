@@ -11,9 +11,9 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/mattermost/mattermost/server/public/model"
-	"github.com/mattermost/mattermost/server/public/shared/mlog"
-	"github.com/mattermost/mattermost/server/v8/channels/utils/fileutils"
+	"github.com/mattermost/mattermost-server/v6/model"
+	"github.com/mattermost/mattermost-server/v6/shared/mlog"
+	"github.com/mattermost/mattermost-server/v6/utils/fileutils"
 )
 
 var (
@@ -62,12 +62,6 @@ func resolveConfigFilePath(path string) (string, error) {
 	// Absolute paths are explicit and require no resolution.
 	if filepath.IsAbs(path) {
 		return path, nil
-	}
-
-	// Search for the relative path to the file in the channels/config folder, taking into account
-	// various common starting points.
-	if configFile := fileutils.FindFile(filepath.Join("channels/config", path)); configFile != "" {
-		return configFile, nil
 	}
 
 	// Search for the relative path to the file in the config folder, taking into account
@@ -130,6 +124,7 @@ func (fs *FileStore) Load() ([]byte, error) {
 	f, err := os.Open(fs.path)
 	if os.IsNotExist(err) {
 		return nil, nil
+
 	} else if err != nil {
 		return nil, errors.Wrapf(err, "failed to open %s for reading", fs.path)
 	}

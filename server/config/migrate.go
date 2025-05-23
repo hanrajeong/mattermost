@@ -32,11 +32,9 @@ func Migrate(from, to string) error {
 		*sourceConfig.SamlSettings.PrivateKeyFile,
 	}
 
-	// Only migrate advanced logging config if it is a filespec.
-	dsn := sourceConfig.LogSettings.GetAdvancedLoggingConfig()
-	cfgSource, err := NewLogConfigSrc(dsn, source)
-	if err == nil && cfgSource.GetType() == LogConfigSrcTypeFile {
-		files = append(files, string(dsn))
+	// Only migrate advanced logging config if it is not embedded JSON.
+	if !isJSONMap(*sourceConfig.LogSettings.AdvancedLoggingConfig) {
+		files = append(files, *sourceConfig.LogSettings.AdvancedLoggingConfig)
 	}
 
 	files = append(files, sourceConfig.PluginSettings.SignaturePublicKeyFiles...)

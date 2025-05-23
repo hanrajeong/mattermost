@@ -1,0 +1,11 @@
+lib/
+dist/
+node_modules/
+es/
+amd/
+docs/assets
+coverage/
+.cache/
+public/
+static/
+tmp-*-repo/

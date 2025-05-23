@@ -4,8 +4,7 @@
 package einterfaces
 
 import (
-	"github.com/mattermost/mattermost/server/public/model"
-	"github.com/mattermost/mattermost/server/public/shared/request"
+	"github.com/mattermost/mattermost-server/v6/model"
 )
 
 type ClusterMessageHandler func(msg *model.ClusterMessage)
@@ -21,20 +20,13 @@ type ClusterInterface interface {
 	// and zero means "totally healthy".
 	HealthScore() int
 	GetMyClusterInfo() *model.ClusterInfo
-	GetClusterInfos() ([]*model.ClusterInfo, error)
+	GetClusterInfos() []*model.ClusterInfo
 	SendClusterMessage(msg *model.ClusterMessage)
 	SendClusterMessageToNode(nodeID string, msg *model.ClusterMessage) error
 	NotifyMsg(buf []byte)
-	GetClusterStats(rctx request.CTX) ([]*model.ClusterStats, *model.AppError)
-	GetLogs(ctx request.CTX, page, perPage int) ([]string, *model.AppError)
-	QueryLogs(rctx request.CTX, page, perPage int) (map[string][]string, *model.AppError)
-	GenerateSupportPacket(rctx request.CTX, options *model.SupportPacketOptions) (map[string][]model.FileData, error)
+	GetClusterStats() ([]*model.ClusterStats, *model.AppError)
+	GetLogs(page, perPage int) ([]string, *model.AppError)
+	QueryLogs(page, perPage int) (map[string][]string, *model.AppError)
 	GetPluginStatuses() (model.PluginStatuses, *model.AppError)
 	ConfigChanged(previousConfig *model.Config, newConfig *model.Config, sendToOtherServer bool) *model.AppError
-	// WebConnCountForUser returns the number of active webconn connections
-	// for a given userID.
-	WebConnCountForUser(userID string) (int, *model.AppError)
-	// GetWSQueues returns the necessary websocket queues from a cluster for a given
-	// connectionID and sequence number.
-	GetWSQueues(userID, connectionID string, seqNum int64) (map[string]*model.WSQueues, error)
 }

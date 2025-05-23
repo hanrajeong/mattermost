@@ -4,11 +4,10 @@
 package einterfaces
 
 import (
-	"github.com/mattermost/mattermost/server/public/model"
-	"github.com/mattermost/mattermost/server/public/shared/request"
+	"github.com/mattermost/mattermost-server/v6/model"
 )
 
 type AccountMigrationInterface interface {
-	MigrateToLdap(c request.CTX, fromAuthService string, foreignUserFieldNameToMatch string, force bool, dryRun bool) *model.AppError
-	MigrateToSaml(c request.CTX, fromAuthService string, usersMap map[string]string, auto bool, dryRun bool) *model.AppError
+	MigrateToLdap(fromAuthService string, foreignUserFieldNameToMatch string, force bool, dryRun bool) *model.AppError
+	MigrateToSaml(fromAuthService string, usersMap map[string]string, auto bool, dryRun bool) *model.AppError
 }

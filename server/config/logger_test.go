@@ -10,19 +10,19 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/mattermost/mattermost/server/public/model"
-	"github.com/mattermost/mattermost/server/public/shared/mlog"
+	"github.com/mattermost/mattermost-server/v6/model"
+	"github.com/mattermost/mattermost-server/v6/shared/mlog"
 )
 
 func TestMloggerConfigFromAuditConfig(t *testing.T) {
 	auditSettings := model.ExperimentalAuditSettings{
-		FileEnabled:      model.NewPointer(true),
-		FileName:         model.NewPointer("audit.log"),
-		FileMaxSizeMB:    model.NewPointer(20),
-		FileMaxAgeDays:   model.NewPointer(1),
-		FileMaxBackups:   model.NewPointer(5),
-		FileCompress:     model.NewPointer(true),
-		FileMaxQueueSize: model.NewPointer(5000),
+		FileEnabled:      model.NewBool(true),
+		FileName:         model.NewString("audit.log"),
+		FileMaxSizeMB:    model.NewInt(20),
+		FileMaxAgeDays:   model.NewInt(1),
+		FileMaxBackups:   model.NewInt(5),
+		FileCompress:     model.NewBool(true),
+		FileMaxQueueSize: model.NewInt(5000),
 	}
 
 	t.Run("validate default audit settings", func(t *testing.T) {
@@ -49,4 +49,5 @@ func TestMloggerConfigFromAuditConfig(t *testing.T) {
 		require.NoError(t, err, "unmarshal should not fail")
 		assert.Equal(t, optionsExpected, optionsReceived)
 	})
+
 }

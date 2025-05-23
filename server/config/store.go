@@ -11,9 +11,9 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/mattermost/mattermost/server/public/model"
-	"github.com/mattermost/mattermost/server/public/shared/i18n"
-	"github.com/mattermost/mattermost/server/public/utils"
+	"github.com/mattermost/mattermost-server/v6/model"
+	"github.com/mattermost/mattermost-server/v6/shared/i18n"
+	"github.com/mattermost/mattermost-server/v6/utils/jsonutils"
 )
 
 var (
@@ -258,7 +258,7 @@ func (s *Store) Load() error {
 	loadedCfg := &model.Config{}
 	if len(configBytes) != 0 {
 		if err = json.Unmarshal(configBytes, &loadedCfg); err != nil {
-			return utils.HumanizeJSONError(err, configBytes)
+			return jsonutils.HumanizeJSONError(err, configBytes)
 		}
 	}
 
@@ -278,7 +278,7 @@ func (s *Store) Load() error {
 	// SetDefaults() will generate missing data. This avoids an additional write
 	// to the backing store.
 	if loadedCfg.ServiceSettings.SiteURL == nil {
-		loadedCfg.ServiceSettings.SiteURL = model.NewPointer("")
+		loadedCfg.ServiceSettings.SiteURL = model.NewString("")
 	}
 
 	// Setting defaults allows us to accept partial config objects.

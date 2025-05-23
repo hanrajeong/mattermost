@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/mattermost/mattermost/server/public/model"
+	"github.com/mattermost/mattermost-server/v6/model"
 )
 
 var emptyConfig, readOnlyConfig, minimalConfig, minimalConfigNoFF, invalidConfig, fixesRequiredConfig, ldapConfig, testConfig, customConfigDefaults *model.Config
@@ -19,23 +19,23 @@ func init() {
 	emptyConfig = &model.Config{}
 	readOnlyConfig = &model.Config{
 		ClusterSettings: model.ClusterSettings{
-			Enable:         model.NewPointer(true),
-			ReadOnlyConfig: model.NewPointer(true),
+			Enable:         model.NewBool(true),
+			ReadOnlyConfig: model.NewBool(true),
 		},
 	}
 	minimalConfig = &model.Config{
 		ServiceSettings: model.ServiceSettings{
-			SiteURL: model.NewPointer("http://minimal"),
+			SiteURL: model.NewString("http://minimal"),
 		},
 		SqlSettings: model.SqlSettings{
-			AtRestEncryptKey: model.NewPointer("abcdefghijklmnopqrstuvwxyz0123456789"),
+			AtRestEncryptKey: model.NewString("abcdefghijklmnopqrstuvwxyz0123456789"),
 		},
 		FileSettings: model.FileSettings{
-			PublicLinkSalt: model.NewPointer("abcdefghijklmnopqrstuvwxyz0123456789"),
+			PublicLinkSalt: model.NewString("abcdefghijklmnopqrstuvwxyz0123456789"),
 		},
 		LocalizationSettings: model.LocalizationSettings{
-			DefaultServerLocale: model.NewPointer("en"),
-			DefaultClientLocale: model.NewPointer("en"),
+			DefaultServerLocale: model.NewString("en"),
+			DefaultClientLocale: model.NewString("en"),
 		},
 	}
 
@@ -46,39 +46,42 @@ func init() {
 
 	invalidConfig = &model.Config{
 		ServiceSettings: model.ServiceSettings{
-			SiteURL: model.NewPointer("invalid"),
+			SiteURL: model.NewString("invalid"),
 		},
 	}
 	fixesRequiredConfig = &model.Config{
 		ServiceSettings: model.ServiceSettings{
-			SiteURL: model.NewPointer("http://trailingslash/"),
+			SiteURL: model.NewString("http://trailingslash/"),
 		},
 		SqlSettings: model.SqlSettings{
-			AtRestEncryptKey: model.NewPointer("abcdefghijklmnopqrstuvwxyz0123456789"),
+			AtRestEncryptKey: model.NewString("abcdefghijklmnopqrstuvwxyz0123456789"),
 		},
 		FileSettings: model.FileSettings{
-			DriverName:     model.NewPointer(model.ImageDriverLocal),
-			Directory:      model.NewPointer("/path/to/directory"),
-			PublicLinkSalt: model.NewPointer("abcdefghijklmnopqrstuvwxyz0123456789"),
+			DriverName:     model.NewString(model.ImageDriverLocal),
+			Directory:      model.NewString("/path/to/directory"),
+			PublicLinkSalt: model.NewString("abcdefghijklmnopqrstuvwxyz0123456789"),
 		},
 		LocalizationSettings: model.LocalizationSettings{
-			DefaultServerLocale: model.NewPointer("garbage"),
-			DefaultClientLocale: model.NewPointer("garbage"),
+			DefaultServerLocale: model.NewString("garbage"),
+			DefaultClientLocale: model.NewString("garbage"),
 		},
 	}
 	ldapConfig = &model.Config{
 		LdapSettings: model.LdapSettings{
-			BindPassword: model.NewPointer("password"),
+			BindPassword: model.NewString("password"),
 		},
 	}
 	testConfig = &model.Config{
 		ServiceSettings: model.ServiceSettings{
-			SiteURL: model.NewPointer("http://TestStoreNew"),
+			SiteURL: model.NewString("http://TestStoreNew"),
 		},
 	}
 	customConfigDefaults = &model.Config{
 		ServiceSettings: model.ServiceSettings{
-			SiteURL: model.NewPointer("http://custom.com"),
+			SiteURL: model.NewString("http://custom.com"),
+		},
+		DisplaySettings: model.DisplaySettings{
+			ExperimentalTimezone: model.NewBool(false),
 		},
 	}
 }
@@ -110,7 +113,7 @@ func TestMergeConfigs(t *testing.T) {
 		base := &model.Config{}
 		base.SetDefaults()
 		patch := base.Clone()
-		patch.ServiceSettings.SiteURL = model.NewPointer("http://newhost.ca")
+		patch.ServiceSettings.SiteURL = model.NewString("http://newhost.ca")
 
 		merged, err := Merge(base, patch, nil)
 		require.NoError(t, err)
@@ -122,12 +125,12 @@ func TestMergeConfigs(t *testing.T) {
 		base := &model.Config{}
 		base.SetDefaults()
 		patch := &model.Config{}
-		patch.ServiceSettings.SiteURL = model.NewPointer("http://newhost.ca")
-		patch.GoogleSettings.Enable = model.NewPointer(true)
+		patch.ServiceSettings.SiteURL = model.NewString("http://newhost.ca")
+		patch.GoogleSettings.Enable = model.NewBool(true)
 
 		expected := base.Clone()
-		expected.ServiceSettings.SiteURL = model.NewPointer("http://newhost.ca")
-		expected.GoogleSettings.Enable = model.NewPointer(true)
+		expected.ServiceSettings.SiteURL = model.NewString("http://newhost.ca")
+		expected.GoogleSettings.Enable = model.NewBool(true)
 
 		merged, err := Merge(base, patch, nil)
 		require.NoError(t, err)
@@ -144,7 +147,7 @@ func TestConfigEnvironmentOverrides(t *testing.T) {
 	base, err := NewStoreFromBacking(memstore, nil, false)
 	require.NoError(t, err)
 	originalConfig := &model.Config{}
-	originalConfig.ServiceSettings.SiteURL = model.NewPointer("http://notoverridden.ca")
+	originalConfig.ServiceSettings.SiteURL = model.NewString("http://notoverridden.ca")
 
 	os.Setenv("MM_SERVICESETTINGS_SITEURL", "http://overridden.ca")
 	defer os.Unsetenv("MM_SERVICESETTINGS_SITEURL")

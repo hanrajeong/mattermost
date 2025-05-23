@@ -4,10 +4,10 @@
 package jobs
 
 import (
-	"github.com/mattermost/mattermost/server/public/model"
+	"github.com/mattermost/mattermost-server/v6/model"
 )
 
 type MessageExportJobInterface interface {
 	MakeWorker() model.Worker
-	MakeScheduler() Scheduler
+	MakeScheduler() model.Scheduler
 }

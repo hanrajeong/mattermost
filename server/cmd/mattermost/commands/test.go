@@ -13,11 +13,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/mattermost/mattermost/server/public/model"
-	"github.com/mattermost/mattermost/server/public/shared/i18n"
-	"github.com/mattermost/mattermost/server/v8/channels/api4"
-	"github.com/mattermost/mattermost/server/v8/channels/app"
-	"github.com/mattermost/mattermost/server/v8/channels/wsapi"
+	"github.com/mattermost/mattermost-server/v6/api4"
+	"github.com/mattermost/mattermost-server/v6/app"
+	"github.com/mattermost/mattermost-server/v6/model"
+	"github.com/mattermost/mattermost-server/v6/shared/i18n"
+	"github.com/mattermost/mattermost-server/v6/wsapi"
 )
 
 var TestCmd = &cobra.Command{
@@ -103,7 +103,6 @@ func setupClientTests(cfg *model.Config) {
 	*cfg.ServiceSettings.EnableCustomEmoji = true
 	*cfg.ServiceSettings.EnableIncomingWebhooks = false
 	*cfg.ServiceSettings.EnableOutgoingWebhooks = false
-	*cfg.ServiceSettings.EnableOutgoingOAuthConnections = false
 }
 
 func executeTestCommand(command *exec.Cmd) {

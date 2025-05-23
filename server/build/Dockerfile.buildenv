@@ -1,5 +1,3 @@
-FROM golang:1.23.9-bullseye@sha256:f2ea45502b0565bd554ed2d4954ef1eb434df07ff4cdb867fabb4d2a6b1c0668
+FROM golang:1.19.5@sha256:bb9811fad43a7d6fd2173248d8331b2dcf5ac9af20976b1937ecd214c5b8c383
 
-RUN apt-get update && apt-get install -y make git apt-transport-https ca-certificates curl software-properties-common build-essential zip xmlsec1 jq pgloader
-
-RUN git config --global --add safe.directory /mattermost
+RUN apt-get update && apt-get install -y make git apt-transport-https ca-certificates curl software-properties-common build-essential zip xmlsec1 jq
