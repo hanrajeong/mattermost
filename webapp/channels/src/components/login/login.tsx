@@ -3,15 +3,18 @@
 
 import classNames from 'classnames';
 import throttle from 'lodash/throttle';
-import React, {useState, useEffect, useRef, useCallback} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import type {FormEvent} from 'react';
 import {useIntl} from 'react-intl';
-import {useSelector, useDispatch} from 'react-redux';
-import {Link, useLocation, useHistory, Route} from 'react-router-dom';
+import {useDispatch, useSelector} from 'react-redux';
+import {Link, useHistory, useLocation, Route} from 'react-router-dom';
 
 import type {Team} from '@mattermost/types/teams';
+import type {AppDispatch} from 'types/store';
 
+import {login} from 'actions/views/login';
 import {loadMe} from 'mattermost-redux/actions/users';
+import {addUserToTeamFromInvite} from 'actions/team_actions';
 import {Client4} from 'mattermost-redux/client';
 import {RequestStatus} from 'mattermost-redux/constants';
 import {getConfig, getLicense} from 'mattermost-redux/selectors/entities/general';
@@ -20,9 +23,7 @@ import {getTeamByName, getMyTeamMember} from 'mattermost-redux/selectors/entitie
 import {getCurrentUser} from 'mattermost-redux/selectors/entities/users';
 
 import {redirectUserToDefaultTeam} from 'actions/global_actions';
-import {addUserToTeamFromInvite} from 'actions/team_actions';
 import {trackEvent} from 'actions/telemetry_actions';
-import {login} from 'actions/views/login';
 import LocalStorageStore from 'stores/local_storage_store';
 
 import AlertBanner from 'components/alert_banner';
@@ -67,7 +68,7 @@ type LoginProps = {
 
 const Login = ({onCustomizeHeader}: LoginProps) => {
     const {formatMessage} = useIntl();
-    const dispatch = useDispatch();
+    const dispatch: AppDispatch = useDispatch();
     const history = useHistory();
     const {pathname, search, hash} = useLocation();
 
@@ -579,23 +580,8 @@ const Login = ({onCustomizeHeader}: LoginProps) => {
             return;
         }
 
-        submit({loginId, password});
-    };
-
-    const submit = async ({loginId, password, token}: SubmitOptions) => {
-        setIsWaiting(true);
-
-        const {error: loginError} = await dispatch(login(loginId, password, token));
-
-        if (loginError && loginError.server_error_id && loginError.server_error_id.length !== 0) {
-            if (loginError.server_error_id === 'api.user.login.not_verified.app_error') {
-                history.push('/should_verify_email?&email=' + encodeURIComponent(loginId));
-            } else if (loginError.server_error_id === 'store.sql_user.get_for_login.app_error' ||
-                loginError.server_error_id === 'ent.ldap.do_login.user_not_registered.app_error') {
-                setShowMfa(false);
-                setIsWaiting(false);
-                setAlertBanner({
-                    mode: 'danger',
+        const submit = async ({loginId, password, token}: SubmitOptions) => {
+            setIsWaiting(true);
                     title: formatMessage({
                         id: 'login.userNotFound',
                         defaultMessage: "We couldn't find an account matching your login credentials.",
@@ -877,7 +863,7 @@ const Login = ({onCustomizeHeader}: LoginProps) => {
                                             value={loginId}
                                             onChange={handleInputOnChange}
                                             hasError={hasError}
-                                            placeholder={getInputPlaceholder()}
+                                            placeholder={formatMessage({id: 'login.employeeId', defaultMessage: '사번'})}
                                             disabled={isWaiting}
                                             autoFocus={true}
                                             aria-describedby={alertBanner ? 'login-body-card-banner' : undefined}

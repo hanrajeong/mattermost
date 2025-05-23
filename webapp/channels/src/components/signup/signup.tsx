@@ -3,7 +3,8 @@
 
 import classNames from 'classnames';
 import throttle from 'lodash/throttle';
-import React, {useState, useEffect, useRef, useCallback} from 'react';
+import * as React from 'react';
+import {useState, useEffect, useRef, useCallback} from 'react';
 import type {FocusEvent} from 'react';
 import {FormattedMessage, useIntl} from 'react-intl';
 import {useSelector, useDispatch} from 'react-redux';
@@ -128,17 +129,17 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
 
     const noOpenServer = !inviteId && !token && !enableOpenServer && !noAccounts && !enableUserCreation;
 
-    const [employeeId, setEmployeeId] = useState(parsedEmployeeId ?? '');
-    const [fullName, setFullName] = useState(parsedFullName ?? '');
+    const [email, setEmail] = useState(parsedEmail ?? '');
+    const [name, setName] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(Boolean(inviteId));
     const [isWaiting, setIsWaiting] = useState(false);
-    const [employeeIdError, setEmployeeIdError] = useState('');
-    const [fullNameError, setFullNameError] = useState('');
+    const [emailError, setEmailError] = useState('');
+    const [nameError, setNameError] = useState('');
     const [passwordError, setPasswordError] = useState('');
     const [brandImageError, setBrandImageError] = useState(false);
     const [serverError, setServerError] = useState('');
-    const [teamName, setTeamName] = useState('');
+    const [teamName, setTeamName] = useState(parsedTeamName ?? '');
     const [alertBanner, setAlertBanner] = useState<AlertBannerProps | null>(null);
     const [isMobileView, setIsMobileView] = useState(false);
     const [subscribeToSecurityNewsletter, setSubscribeToSecurityNewsletter] = useState(false);
@@ -147,8 +148,8 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
     const cwsAvailability = useCWSAvailabilityCheck();
 
     const enableExternalSignup = enableSignUpWithGitLab || enableSignUpWithOffice365 || enableSignUpWithGoogle || enableSignUpWithOpenId || enableLDAP || enableSAML;
-    const hasError = Boolean(employeeIdError || fullNameError || passwordError || serverError || alertBanner);
-    const canSubmit = Boolean(employeeId && fullName && password) && !hasError && !loading;
+    const hasError = Boolean(emailError || nameError || passwordError || serverError || alertBanner);
+    const canSubmit = Boolean(email && name && password) && !hasError && !loading;
     const passwordConfig = useSelector(getPasswordConfig);
     const {error: passwordInfo} = isValidPassword('', passwordConfig, intl);
 
@@ -156,7 +157,7 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
 
     const subscribeToSecurityNewsletterFunc = () => {
         try {
-            Client4.subscribeToNewsletter({email: employeeId, subscribed_content: 'security_newsletter'});
+            Client4.subscribeToNewsletter({email, subscribed_content: 'security_newsletter'});
         } catch (error) {
             // eslint-disable-next-line no-console
             console.error(error);
@@ -375,16 +376,16 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
 
     useEffect(() => {
         if (submitClicked) {
-            if (employeeIdError && employeeIdInput.current) {
-                employeeIdInput.current.focus();
-            } else if (fullNameError && fullNameInput.current) {
-                fullNameInput.current.focus();
+            if (emailError && emailInput.current) {
+                emailInput.current.focus();
+            } else if (nameError && nameInput.current) {
+                nameInput.current.focus();
             } else if (passwordError && passwordInput.current) {
                 passwordInput.current.focus();
             }
             setSubmitClicked(false);
         }
-    }, [employeeIdError, fullNameError, passwordError, submitClicked]);
+    }, [emailError, nameError, passwordError, submitClicked]);
 
     if (loading) {
         return (<LoadingScreen/>);
@@ -428,21 +429,21 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
         );
     };
 
-    const handleEmployeeIdOnChange = ({target: {value: employeeId}}: React.ChangeEvent<HTMLInputElement>) => {
-        setEmployeeId(employeeId);
+    const handleEmailOnChange = ({target: {value: email}}: React.ChangeEvent<HTMLInputElement>) => {
+        setEmail(email);
         dismissAlert();
 
-        if (employeeIdError) {
-            setEmployeeIdError('');
+        if (emailError) {
+            setEmailError('');
         }
     };
 
-    const handleFullNameOnChange = ({target: {value: fullName}}: React.ChangeEvent<HTMLInputElement>) => {
-        setFullName(fullName);
+    const handleNameOnChange = ({target: {value: name}}: React.ChangeEvent<HTMLInputElement>) => {
+        setName(name);
         dismissAlert();
 
-        if (fullNameError) {
-            setFullNameError('');
+        if (nameError) {
+            setNameError('');
         }
     };
 
@@ -521,20 +522,43 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
     const isUserValid = () => {
         let isValid = true;
 
-        const providedEmployeeId = employeeIdInput.current?.value.trim();
+        const providedEmail = emailInput.current?.value.trim();
         const telemetryEvents: TelemetryErrorList = {errors: [], success: true};
 
-        if (!providedEmployeeId) {
-            setEmployeeIdError(formatMessage({id: 'signup_user_completed.required', defaultMessage: 'This field is required'}));
+        if (!providedEmail) {
+            setEmailError(formatMessage({id: 'signup_user_completed.required', defaultMessage: 'This field is required'}));
             telemetryEvents.errors.push({field: 'employeeId', rule: 'not_provided'});
             isValid = false;
         }
 
-        const providedFullName = fullNameInput.current?.value.trim();
+        const providedUsername = nameInput.current?.value.trim().toLowerCase();
 
-        if (!providedFullName) {
-            setFullNameError(formatMessage({id: 'signup_user_completed.required', defaultMessage: 'This field is required'}));
-            telemetryEvents.errors.push({field: 'fullName', rule: 'not_provided'});
+        if (providedUsername) {
+            const usernameError = isValidUsername(providedUsername);
+
+            if (usernameError) {
+                let nameError = '';
+                if (usernameError.id === ValidationErrors.RESERVED_NAME) {
+                    nameError = formatMessage({id: 'signup_user_completed.reserved', defaultMessage: 'This username is reserved, please choose a new one.'});
+                } else {
+                    nameError = formatMessage(
+                        {
+                            id: 'signup_user_completed.usernameLength',
+                            defaultMessage: 'Usernames have to begin with a lowercase letter and be {min}-{max} characters long. You can use lowercase letters, numbers, periods, dashes, and underscores.',
+                        },
+                        {
+                            min: Constants.MIN_USERNAME_LENGTH,
+                            max: Constants.MAX_USERNAME_LENGTH,
+                        },
+                    );
+                }
+                telemetryEvents.errors.push({field: 'username', rule: usernameError.id.toLowerCase()});
+                setNameError(nameError);
+                isValid = false;
+            }
+        } else {
+            setNameError(formatMessage({id: 'signup_user_completed.required', defaultMessage: 'This field is required'}));
+            telemetryEvents.errors.push({field: 'username', rule: 'not_provided'});
             isValid = false;
         }
 
@@ -567,15 +591,15 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
         setSubmitClicked(true);
 
         if (isUserValid()) {
-            setEmployeeIdError('');
-            setFullNameError('');
+            setNameError('');
+            setEmailError('');
             setPasswordError('');
             setServerError('');
             setIsWaiting(true);
 
             const user = {
-                email: employeeIdInput.current?.value.trim(),
-                username: fullNameInput.current?.value.trim(),
+                email: emailInput.current?.value.trim().toLowerCase(),
+                username: emailInput.current?.value.trim().toLowerCase(),
                 password: passwordInput.current?.value,
             } as UserProfile;
 
@@ -593,7 +617,7 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
 
                 // Special case for accessibility to show the error message when the username is already taken
                 if (error.server_error_id === 'app.user.save.username_exists.app_error') {
-                    setFullNameError(error.message);
+                    setNameError(error.message);
                     setSubmitClicked(true);
                 }
                 return;
@@ -730,7 +754,7 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
             );
         }
 
-        let employeeIdCustomLabelForInput: CustomMessageInputType = parsedEmployeeId ? {
+        let emailCustomLabelForInput: CustomMessageInputType = parsedEmail ? {
             type: ItemStatus.INFO,
             value: formatMessage(
                 {
@@ -742,8 +766,8 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
         } : null;
 
         // error will have preference over info message
-        if (employeeIdError) {
-            employeeIdCustomLabelForInput = {type: ItemStatus.ERROR, value: employeeIdError};
+        if (emailError) {
+            emailCustomLabelForInput = {type: ItemStatus.ERROR, value: emailError};
         }
 
         return (
@@ -793,43 +817,45 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
                             {enableSignUpWithEmail && (
                                 <form className='signup-body-card-form'>
                                     <Input
-                                        data-testid='signup-body-card-form-employeeId-input'
-                                        ref={employeeIdInput}
-                                        name='employeeId'
-                                        label={formatMessage({id: 'signup_user_completed.employeeIdLabel', defaultMessage: '사번'})}
-                                        value={employeeId}
+                                        data-testid='signup-body-card-form-email-input'
+                                        ref={emailInput}
+                                        name='email'
+                                        className='signup-body-card-form-email-input'
+                                        type='text'
                                         inputSize={SIZE.LARGE}
-                                        onChange={handleEmployeeIdOnChange}
+                                        value={email}
+                                        onChange={handleEmailOnChange}
                                         placeholder={formatMessage({
                                             id: 'signup_user_completed.employeeIdLabel',
                                             defaultMessage: '사번',
                                         })}
-                                        disabled={isWaiting || Boolean(parsedEmployeeId)}
+                                        disabled={isWaiting || Boolean(parsedEmail)}
                                         autoFocus={true}
-                                        customMessage={employeeIdCustomLabelForInput}
-                                        onBlur={(e) => handleOnBlur(e, 'employeeId')}
+                                        customMessage={emailCustomLabelForInput}
+                                        onBlur={(e) => handleOnBlur(e, 'email')}
                                     />
                                     <Input
                                         data-testid='signup-body-card-form-name-input'
-                                        ref={fullNameInput}
-                                        name='fullName'
-                                        label={formatMessage({id: 'signup_user_completed.fullNameLabel', defaultMessage: '성명'})}
-                                        value={fullName}
+                                        ref={nameInput}
+                                        name='name'
+                                        className='signup-body-card-form-name-input'
+                                        type='text'
                                         inputSize={SIZE.LARGE}
-                                        onChange={handleFullNameOnChange}
+                                        value={name}
+                                        onChange={handleNameOnChange}
                                         placeholder={formatMessage({
-                                            id: 'signup_user_completed.fullNameLabel',
-                                            defaultMessage: '성명',
+                                            id: 'signup_user_completed.chooseUser',
+                                            defaultMessage: 'Choose a Username',
                                         })}
                                         disabled={isWaiting}
-                                        autoFocus={Boolean(parsedEmployeeId)}
+                                        autoFocus={Boolean(parsedEmail)}
                                         customMessage={
-                                            fullNameError ? {type: ItemStatus.ERROR, value: fullNameError} : {
+                                            nameError ? {type: ItemStatus.ERROR, value: nameError} : {
                                                 type: ItemStatus.INFO,
                                                 value: formatMessage({id: 'signup_user_completed.userHelp', defaultMessage: 'You can use lowercase letters, numbers, periods, dashes, and underscores.'}),
                                             }
                                         }
-                                        onBlur={(e) => handleOnBlur(e, 'fullName')}
+                                        onBlur={(e) => handleOnBlur(e, 'username')}
                                     />
                                     <PasswordInput
                                         data-testid='signup-body-card-form-password-input'
