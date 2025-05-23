@@ -1,0 +1,77 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`components/file_attachment/FilenameOverlay should match snapshot, compact display 1`] = `
+<WithTooltip
+  title="test_filename"
+>
+  <a
+    className="post-image__name btn btn-icon btn-sm"
+    href="#"
+    onClick={[MockFunction]}
+    rel="noopener noreferrer"
+  >
+    <AttachmentIcon
+      className="icon"
+    />
+    test_filename
+  </a>
+</WithTooltip>
+`;
+
+exports[`components/file_attachment/FilenameOverlay should match snapshot, standard but not downloadable 1`] = `
+<span
+  className="post-image__name"
+>
+  test_filename
+</span>
+`;
+
+exports[`components/file_attachment/FilenameOverlay should match snapshot, standard display 1`] = `
+<div
+  className="post-image__name"
+>
+  <WithTooltip
+    title={
+      Object {
+        "defaultMessage": "Download",
+        "id": "view_image_popover.download",
+      }
+    }
+  >
+    <ForwardRef
+      aria-label="download"
+      className="btn btn-icon btn-sm"
+      download="test_filename"
+      href="/api/v4/files/thumbnail_id?download=1"
+      location="filename_overlay"
+    >
+      test_filename
+    </ForwardRef>
+  </WithTooltip>
+</div>
+`;
+
+exports[`components/file_attachment/FilenameOverlay should match snapshot, with Download icon as children 1`] = `
+<div
+  className="post-image__name"
+>
+  <WithTooltip
+    title={
+      Object {
+        "defaultMessage": "Download",
+        "id": "view_image_popover.download",
+      }
+    }
+  >
+    <ForwardRef
+      aria-label="download"
+      className="btn btn-icon btn-sm"
+      download="test_filename"
+      href="/api/v4/files/thumbnail_id?download=1"
+      location="filename_overlay"
+    >
+      <AttachmentIcon />
+    </ForwardRef>
+  </WithTooltip>
+</div>
+`;

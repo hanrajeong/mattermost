@@ -1,0 +1,139 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`components/search_results/MessagesOrFilesSelector should match snapshot, on files selected 1`] = `
+<ContextProvider
+  value={
+    Object {
+      "store": Object {
+        "clearActions": [Function],
+        "dispatch": [Function],
+        "getActions": [Function],
+        "getState": [Function],
+        "replaceReducer": [Function],
+        "subscribe": [Function],
+      },
+      "subscription": Subscription {
+        "handleChangeWrapper": [Function],
+        "listeners": Object {
+          "notify": [Function],
+        },
+        "onStateChange": [Function],
+        "parentSub": undefined,
+        "store": Object {
+          "clearActions": [Function],
+          "dispatch": [Function],
+          "getActions": [Function],
+          "getState": [Function],
+          "replaceReducer": [Function],
+          "subscribe": [Function],
+        },
+        "unsubscribe": null,
+      },
+    }
+  }
+>
+  <MessagesOrFilesSelector
+    crossTeamSearchEnabled={false}
+    filesCounter="10"
+    isFileAttachmentsEnabled={true}
+    messagesCounter="5"
+    onChange={[MockFunction]}
+    onFilter={[MockFunction]}
+    onTeamChange={[MockFunction]}
+    selected="files"
+    selectedFilter="code"
+  />
+</ContextProvider>
+`;
+
+exports[`components/search_results/MessagesOrFilesSelector should match snapshot, on messages selected 1`] = `
+<ContextProvider
+  value={
+    Object {
+      "store": Object {
+        "clearActions": [Function],
+        "dispatch": [Function],
+        "getActions": [Function],
+        "getState": [Function],
+        "replaceReducer": [Function],
+        "subscribe": [Function],
+      },
+      "subscription": Subscription {
+        "handleChangeWrapper": [Function],
+        "listeners": Object {
+          "notify": [Function],
+        },
+        "onStateChange": [Function],
+        "parentSub": undefined,
+        "store": Object {
+          "clearActions": [Function],
+          "dispatch": [Function],
+          "getActions": [Function],
+          "getState": [Function],
+          "replaceReducer": [Function],
+          "subscribe": [Function],
+        },
+        "unsubscribe": null,
+      },
+    }
+  }
+>
+  <MessagesOrFilesSelector
+    crossTeamSearchEnabled={false}
+    filesCounter="10"
+    isFileAttachmentsEnabled={true}
+    messagesCounter="5"
+    onChange={[MockFunction]}
+    onFilter={[MockFunction]}
+    onTeamChange={[MockFunction]}
+    selected="messages"
+    selectedFilter="code"
+  />
+</ContextProvider>
+`;
+
+exports[`components/search_results/MessagesOrFilesSelector should match snapshot, without files tab 1`] = `
+<ContextProvider
+  value={
+    Object {
+      "store": Object {
+        "clearActions": [Function],
+        "dispatch": [Function],
+        "getActions": [Function],
+        "getState": [Function],
+        "replaceReducer": [Function],
+        "subscribe": [Function],
+      },
+      "subscription": Subscription {
+        "handleChangeWrapper": [Function],
+        "listeners": Object {
+          "notify": [Function],
+        },
+        "onStateChange": [Function],
+        "parentSub": undefined,
+        "store": Object {
+          "clearActions": [Function],
+          "dispatch": [Function],
+          "getActions": [Function],
+          "getState": [Function],
+          "replaceReducer": [Function],
+          "subscribe": [Function],
+        },
+        "unsubscribe": null,
+      },
+    }
+  }
+>
+  <MessagesOrFilesSelector
+    crossTeamSearchEnabled={false}
+    filesCounter="10"
+    isFileAttachmentsEnabled={false}
+    messagesCounter="5"
+    onChange={[MockFunction]}
+    onFilter={[MockFunction]}
+    onTeamChange={[MockFunction]}
+    selected="files"
+    selectedFilter="code"
+  />
+</ContextProvider>
+`;

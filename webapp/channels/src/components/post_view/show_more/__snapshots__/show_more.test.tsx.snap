@@ -1,0 +1,20 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`components/post_view/ShowMore should match snapshot 1`] = `
+<div>
+  <div
+    class="post-message post-message--collapsed"
+  >
+    <div
+      class="post-message__text-container"
+      style="max-height: 200px;"
+    >
+      <div>
+        <p>
+          text
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+`;

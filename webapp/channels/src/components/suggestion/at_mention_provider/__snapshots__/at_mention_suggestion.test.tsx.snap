@@ -1,0 +1,207 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`at mention suggestion Should display nick name of non signed in user 1`] = `
+<AtMentionSuggestion
+  isSelection={false}
+  item={
+    Object {
+      "first_name": "a",
+      "id": "userid2",
+      "last_name": "b",
+      "nickname": "c",
+      "textboxId": "post_textbox",
+      "username": "user2",
+    }
+  }
+  matchedPretext="@"
+  onClick={[MockFunction]}
+  onMouseMove={[MockFunction]}
+  term="@user"
+>
+  <SuggestionContainer
+    data-testid="mentionSuggestion_user2"
+    id="post_textbox_@user2"
+    isSelection={false}
+    item={
+      Object {
+        "first_name": "a",
+        "id": "userid2",
+        "last_name": "b",
+        "nickname": "c",
+        "textboxId": "post_textbox",
+        "username": "user2",
+      }
+    }
+    matchedPretext="@"
+    onClick={[MockFunction]}
+    onMouseMove={[MockFunction]}
+    role="option"
+    term="@user"
+  >
+    <li
+      className="suggestion-list__item"
+      data-testid="mentionSuggestion_user2"
+      id="post_textbox_@user2"
+      onClick={[Function]}
+      onMouseMove={[Function]}
+      role="option"
+      tabIndex={-1}
+    >
+      <span
+        className="status-wrapper style--none"
+      >
+        <span
+          className="profile-icon"
+        >
+          <Avatar
+            size="sm"
+            url="/api/v4/users/userid2/image?_=0"
+            username="user2"
+          >
+            <img
+              alt="user2 profile image"
+              className="Avatar Avatar-sm"
+              loading="lazy"
+              onError={[Function]}
+              src="/api/v4/users/userid2/image?_=0"
+            />
+          </Avatar>
+        </span>
+        <Memo(StatusIcon) />
+      </span>
+      <span
+        className="suggestion-list__ellipsis"
+      >
+        <span
+          className="suggestion-list__main"
+        >
+          @user2
+        </span>
+        <span>
+          a b (c)
+        </span>
+        <Component
+          emojiSize={15}
+          emojiStyle={
+            Object {
+              "margin": "0 4px 4px",
+            }
+          }
+          showTooltip={true}
+          userID="userid2"
+        >
+          <div />
+        </Component>
+      </span>
+    </li>
+  </SuggestionContainer>
+</AtMentionSuggestion>
+`;
+
+exports[`at mention suggestion Should not display nick name of the signed in user 1`] = `
+<AtMentionSuggestion
+  isSelection={false}
+  item={
+    Object {
+      "first_name": "a",
+      "id": "userid1",
+      "isCurrentUser": true,
+      "last_name": "b",
+      "nickname": "c",
+      "textboxId": "post_textbox",
+      "username": "user",
+    }
+  }
+  matchedPretext="@"
+  onClick={[MockFunction]}
+  onMouseMove={[MockFunction]}
+  term="@user"
+>
+  <SuggestionContainer
+    data-testid="mentionSuggestion_user"
+    id="post_textbox_@user"
+    isSelection={false}
+    item={
+      Object {
+        "first_name": "a",
+        "id": "userid1",
+        "isCurrentUser": true,
+        "last_name": "b",
+        "nickname": "c",
+        "textboxId": "post_textbox",
+        "username": "user",
+      }
+    }
+    matchedPretext="@"
+    onClick={[MockFunction]}
+    onMouseMove={[MockFunction]}
+    role="option"
+    term="@user"
+  >
+    <li
+      className="suggestion-list__item"
+      data-testid="mentionSuggestion_user"
+      id="post_textbox_@user"
+      onClick={[Function]}
+      onMouseMove={[Function]}
+      role="option"
+      tabIndex={-1}
+    >
+      <span
+        className="status-wrapper style--none"
+      >
+        <span
+          className="profile-icon"
+        >
+          <Avatar
+            size="sm"
+            url="/api/v4/users/userid1/image?_=0"
+            username="user"
+          >
+            <img
+              alt="user profile image"
+              className="Avatar Avatar-sm"
+              loading="lazy"
+              onError={[Function]}
+              src="/api/v4/users/userid1/image?_=0"
+            />
+          </Avatar>
+        </span>
+        <Memo(StatusIcon) />
+      </span>
+      <span
+        className="suggestion-list__ellipsis"
+      >
+        <span
+          className="suggestion-list__main"
+        >
+          @user
+        </span>
+        <span>
+          a b
+        </span>
+        <FormattedMessage
+          defaultMessage="(you)"
+          id="suggestion.user.isCurrent"
+        >
+          <span>
+            (you)
+          </span>
+        </FormattedMessage>
+        <Component
+          emojiSize={15}
+          emojiStyle={
+            Object {
+              "margin": "0 4px 4px",
+            }
+          }
+          showTooltip={true}
+          userID="userid1"
+        >
+          <div />
+        </Component>
+      </span>
+    </li>
+  </SuggestionContainer>
+</AtMentionSuggestion>
+`;

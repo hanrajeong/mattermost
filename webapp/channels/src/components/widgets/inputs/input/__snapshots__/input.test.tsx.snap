@@ -1,0 +1,27 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`components/widgets/inputs/Input should match snapshot 1`] = `
+<div>
+  <div
+    class="Input_container"
+  >
+    <fieldset
+      class="Input_fieldset"
+    >
+      <legend
+        class="Input_legend"
+      />
+      <div
+        class="Input_wrapper"
+      >
+        <input
+          aria-invalid="false"
+          class="Input form-control medium"
+          id="input_"
+          value=""
+        />
+      </div>
+    </fieldset>
+  </div>
+</div>
+`;

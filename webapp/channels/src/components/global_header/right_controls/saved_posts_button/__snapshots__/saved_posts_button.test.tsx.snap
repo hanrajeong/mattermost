@@ -1,0 +1,24 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`components/global/AtMentionsButton should match snapshot 1`] = `
+<WithTooltip
+  title={
+    <Memo(MemoizedFormattedMessage)
+      defaultMessage="Saved messages"
+      id="channel_header.flagged"
+    />
+  }
+>
+  <ForwardRef
+    aria-controls="searchContainer"
+    aria-expanded={false}
+    aria-label="Saved messages"
+    compact={true}
+    icon="bookmark-outline"
+    inverted={true}
+    onClick={[Function]}
+    size="sm"
+    toggled={false}
+  />
+</WithTooltip>
+`;
