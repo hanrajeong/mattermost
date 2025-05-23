@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Mattermost 루트 디렉토리 설정
+MATTERMOST_ROOT="/home/hanra/fshome/sctadm/mattermost"
+cd $MATTERMOST_ROOT
+
 echo "Stopping Mattermost server..."
 # 실행 중인 프로세스 ID 찾기
 MATTERMOST_PID=$(pgrep mattermost)
@@ -16,21 +20,22 @@ else
 fi
 
 echo "Building webapp..."
-cd webapp
+cd $MATTERMOST_ROOT/webapp
 npm run build
 
 echo "Copying dist files to client directory..."
-cd ..
+cd $MATTERMOST_ROOT
 # client 디렉토리 생성 (없는 경우)
 mkdir -p client
 # 기존 파일 백업 (옵션)
-if [ -d "client" ]; then
+if [ -d "client" ] && [ "$(ls -A client)" ]; then
     mv client client_backup_$(date +%Y%m%d_%H%M%S)
 fi
 # dist 파일들을 client 디렉토리로 직접 복사
-cp -r webapp/channels/dist/* client/
+cp -rv $MATTERMOST_ROOT/webapp/channels/dist/* $MATTERMOST_ROOT/client/
 
 echo "Starting Mattermost server..."
+cd $MATTERMOST_ROOT
 nohup ./bin/mattermost server --config ./server/config/config.json > mattermost.log 2>&1 &
 echo "Waiting for server to start..."
 sleep 5
