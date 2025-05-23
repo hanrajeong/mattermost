@@ -1,5 +1,17 @@
 #!/bin/bash
 
+# PostgreSQL 설정
+PG_CTL="/home/hanra/fshome/sctadm/pgsql/bin/pg_ctl"
+PGDATA="/home/hanra/fshome/sctadm/pgdata"
+
+# PostgreSQL 서버 상태 확인 및 시작
+echo "Checking PostgreSQL server status..."
+if ! $PG_CTL status -D $PGDATA > /dev/null 2>&1; then
+    echo "Starting PostgreSQL server..."
+    $PG_CTL start -D $PGDATA -l $PGDATA/logfile
+    sleep 3
+fi
+
 # Mattermost 루트 디렉토리 설정
 MATTERMOST_ROOT="/home/hanra/fshome/sctadm/mattermost"
 cd $MATTERMOST_ROOT
@@ -42,3 +54,6 @@ sleep 5
 
 echo "Deploy completed! Server should be running now."
 echo "You can check the logs with: tail -f mattermost.log"
+
+# PostgreSQL 서버 상태 출력
+$PG_CTL status -D $PGDATA
