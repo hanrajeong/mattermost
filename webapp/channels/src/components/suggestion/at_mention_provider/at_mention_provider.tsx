@@ -113,6 +113,12 @@ export default class AtMentionProvider extends Provider {
             return [];
         }
 
+        // 사번 패턴(예: K1, E2 등)을 입력했을 때는 특수 멘션 표시하지 않음
+        const employeeIdPattern = /^[a-zA-Z][0-9]/;
+        if (employeeIdPattern.test(this.latestPrefix)) {
+            return [];
+        }
+
         return ['all'].filter((item) =>
             item.startsWith(this.latestPrefix),
         ).map((name) => ({
@@ -480,12 +486,16 @@ export default class AtMentionProvider extends Provider {
             
             // 동명이인 처리 - 이름이 같은 사용자가 있는지 확인
             const fullName = `${item.first_name} ${item.last_name}`.trim();
-            if (fullName && (nameCount.get(fullName) || 0) > 1) {
+            const sameNameCount = nameCount.get(fullName) || 0;
+            
+            // 진짜 동명이인이 있는 경우에만 표시 (동일 이름을 가진 사용자가 2명 이상일 때)
+            if (fullName && sameNameCount > 1) {
+                console.log(`동독이인 발견: ${fullName}, 인원 수: ${sameNameCount}`);
                 // 동명이인이 있는 경우 기존 형식대로 표시
                 return {
                     ...cleanItem,
                     hasDuplicates: true,  // 동명이인 표시를 위한 플래그
-                    duplicateCount: nameCount.get(fullName) || 0  // 동명이인 수
+                    duplicateCount: sameNameCount  // 동명이인 수
                 };
             }
             
