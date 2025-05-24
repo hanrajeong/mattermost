@@ -395,20 +395,25 @@ const PreparingWorkspace = ({
             organization: defaultOrgName,
         });
 
-        // Create team with default name
+        // Create team with default name and skip to invite members
         const createDefaultTeam = async () => {
             const {error, newTeam} = await createTeam(defaultOrgName);
             if (!error && newTeam) {
                 setForm({
                     ...form,
                     organization: defaultOrgName,
+                    plugins: {
+                        ...form.plugins,
+                        skipped: true,
+                    },
                     teamMembers: {
                         ...form.teamMembers,
                         inviteId: newTeam.invite_id,
                     },
                 });
-                // Skip to plugins step
-                setStepHistory([WizardSteps.Organization, WizardSteps.Plugins]);
+                // Skip directly to invite members step
+                setStepHistory([WizardSteps.Organization, WizardSteps.Plugins, WizardSteps.InviteMembers]);
+                setCurrentStep(WizardSteps.InviteMembers);
             }
         };
 
@@ -435,67 +440,9 @@ const PreparingWorkspace = ({
             </div>
             <Progress
                 step={currentStep}
-                stepOrder={stepOrder}
-                transitionSpeed={Animations.PAGE_SLIDE}
+                stepHistory={stepHistory}
             />
-            <div className='PreparingWorkspacePageContainer'>
-                <Organization
-                    onPageView={onPageViews[WizardSteps.Organization]}
-                    show={shouldShowPage(WizardSteps.Organization)}
-                    next={makeNext(WizardSteps.Organization)}
-                    transitionDirection={getTransitionDirection(WizardSteps.Organization)}
-                    organization={form.organization || ''}
-                    setOrganization={(organization: Form['organization']) => {
-                        setForm({
-                            ...form,
-                            organization,
-                        });
-                    }}
-                    setInviteId={(inviteId: string) => {
-                        setForm({
-                            ...form,
-                            teamMembers: {
-                                ...form.teamMembers,
-                                inviteId,
-                            },
-                        });
-                    }}
-                    className='child-page'
-                    createTeam={createTeam}
-                    updateTeam={updateTeam}
-                />
-
-                <Plugins
-                    isSelfHosted={isSelfHosted}
-                    onPageView={onPageViews[WizardSteps.Plugins]}
-                    previous={previous}
-                    next={() => {
-                        const pluginChoices = {...form.plugins};
-                        delete pluginChoices.skipped;
-                        makeNext(WizardSteps.Plugins)(pluginChoices);
-                        skipPlugins(false);
-                    }}
-                    skip={() => {
-                        makeNext(WizardSteps.Plugins, true)();
-                        skipPlugins(true);
-                    }}
-                    options={form.plugins}
-                    setOption={(option: keyof Form['plugins']) => {
-                        setForm({
-                            ...form,
-                            plugins: {
-                                ...form.plugins,
-                                [option]: !form.plugins[option],
-                            },
-                        });
-                    }}
-                    show={shouldShowPage(WizardSteps.Plugins)}
-                    transitionDirection={getTransitionDirection(WizardSteps.Plugins)}
-                    className='child-page'
-                    handleVisitMarketPlaceClick={() => {
-                        trackEvent('first_admin_setup', 'click_visit_marketplace_link');
-                    }}
-                />
+            <div className='PreparingWorkspace__body'>
                 <InviteMembers
                     onPageView={onPageViews[WizardSteps.InviteMembers]}
                     next={() => {
@@ -532,11 +479,6 @@ const PreparingWorkspace = ({
                     }}
                     inferredProtocol={form.inferredProtocol}
                     isSelfHosted={isSelfHosted}
-                />
-                <LaunchingWorkspace
-                    onPageView={onPageViews[WizardSteps.LaunchingWorkspace]}
-                    show={currentStep === WizardSteps.LaunchingWorkspace}
-                    transitionDirection={getTransitionDirection(WizardSteps.LaunchingWorkspace)}
                 />
             </div>
             <div className={`PreparingWorkspace__invite-members-illustration ${getInviteMembersAnimationClass()}`}>
