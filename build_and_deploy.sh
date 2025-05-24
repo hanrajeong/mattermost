@@ -81,7 +81,12 @@ mkdir -p client
 
 # dist 파일 복사
 echo "Copying dist files to client directory..."
-cp -rv webapp/channels/dist/* client/
+if cp -r webapp/channels/dist/* client/ 2>/dev/null; then
+    echo "Files copied successfully"
+else
+    echo "Error: Failed to copy dist files"
+    exit 1
+fi
 
 echo "Starting Mattermost server..."
 cd $MATTERMOST_ROOT
