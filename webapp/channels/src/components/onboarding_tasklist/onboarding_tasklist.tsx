@@ -8,7 +8,7 @@ import styled, {css} from 'styled-components';
 
 import {CloseIcon, PlaylistCheckIcon} from '@mattermost/compass-icons/components';
 
-import {getPrevTrialLicense} from 'mattermost-redux/actions/admin';
+// import {getPrevTrialLicense} from 'mattermost-redux/actions/admin';
 import {getMyPreferences, savePreferences} from 'mattermost-redux/actions/preferences';
 import {getConfig} from 'mattermost-redux/selectors/entities/general';
 import {

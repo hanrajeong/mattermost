@@ -14,6 +14,7 @@ import type {UserProfile} from '@mattermost/types/users';
 
 import {getTeamInviteInfo} from 'mattermost-redux/actions/teams';
 import {createUser, loadMe} from 'mattermost-redux/actions/users';
+import {addChannelMember} from 'mattermost-redux/actions/channels';
 import {Client4} from 'mattermost-redux/client';
 import {getConfig, getLicense, getPasswordConfig} from 'mattermost-redux/selectors/entities/general';
 import {getIsOnboardingFlowEnabled} from 'mattermost-redux/selectors/entities/preferences';
@@ -482,11 +483,20 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
 
     const postSignupSuccess = async () => {
         const redirectTo = (new URLSearchParams(search)).get('redirect_to');
+        const channelId = (new URLSearchParams(search)).get('channel_id');
 
-        await dispatch(loadMe());
+        const {data: userData} = await dispatch(loadMe());
 
         if (token) {
             setGlobalItem(token, JSON.stringify({usedBefore: true}));
+        }
+
+        // 채널 초대 처리
+        if (channelId && userData) {
+            const {error} = await dispatch(addChannelMember(channelId, userData.id));
+            if (error) {
+                console.error('Failed to add user to channel:', error);
+            }
         }
 
         if (redirectTo) {
@@ -615,7 +625,12 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
 
                 // Special case for accessibility to show the error message when the username is already taken
                 if (error.server_error_id === 'app.user.save.username_exists.app_error') {
-                    setNameError(error.message);
+                    // 에러 메시지 한국어화
+                    if (error.message === 'An account with that username already exists.') {
+                        setNameError('해당 사번으로 이미 계정이 존재합니다.');
+                    } else {
+                        setNameError(error.message);
+                    }
                     setSubmitClicked(true);
                 }
                 return;
