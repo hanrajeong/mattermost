@@ -109,7 +109,6 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
     const onboardingFlowEnabled = useSelector(getIsOnboardingFlowEnabled);
     const usedBefore = useSelector((state: GlobalState) => (!inviteId && !loggedIn && token ? getGlobalItem(state, token, null) : undefined));
 
-    const emailInput = useRef<HTMLInputElement>(null);
     const nameInput = useRef<HTMLInputElement>(null);
     const passwordInput = useRef<HTMLInputElement>(null);
 
@@ -128,12 +127,10 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
 
     const noOpenServer = !inviteId && !token && !enableOpenServer && !noAccounts && !enableUserCreation;
 
-    const [email, setEmail] = useState(parsedEmail ?? '');
     const [name, setName] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(Boolean(inviteId));
     const [isWaiting, setIsWaiting] = useState(false);
-    const [emailError, setEmailError] = useState('');
     const [nameError, setNameError] = useState('');
     const [passwordError, setPasswordError] = useState('');
     const [brandImageError, setBrandImageError] = useState(false);
@@ -146,8 +143,8 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
     const cwsAvailability = useCWSAvailabilityCheck();
 
     const enableExternalSignup = enableSignUpWithGitLab || enableSignUpWithOffice365 || enableSignUpWithGoogle || enableSignUpWithOpenId || enableLDAP || enableSAML;
-    const hasError = Boolean(emailError || nameError || passwordError || serverError || alertBanner);
-    const canSubmit = Boolean(email && name && password) && !hasError && !loading;
+    const hasError = Boolean(nameError || passwordError || serverError || alertBanner);
+    const canSubmit = Boolean(name && password) && !hasError && !loading;
     const passwordConfig = useSelector(getPasswordConfig);
     const {error: passwordInfo} = isValidPassword('', passwordConfig, intl);
 
@@ -365,16 +362,14 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
 
     useEffect(() => {
         if (submitClicked) {
-            if (emailError && emailInput.current) {
-                emailInput.current.focus();
-            } else if (nameError && nameInput.current) {
+            if (nameError && nameInput.current) {
                 nameInput.current.focus();
             } else if (passwordError && passwordInput.current) {
                 passwordInput.current.focus();
             }
             setSubmitClicked(false);
         }
-    }, [emailError, nameError, passwordError, submitClicked]);
+    }, [nameError, passwordError, submitClicked]);
 
     if (loading) {
         return (<LoadingScreen/>);
@@ -416,15 +411,6 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
                 })}
             </p>
         );
-    };
-
-    const handleEmailOnChange = ({target: {value: email}}: React.ChangeEvent<HTMLInputElement>) => {
-        setEmail(email);
-        dismissAlert();
-
-        if (emailError) {
-            setEmailError('');
-        }
     };
 
     const handleNameOnChange = ({target: {value: name}}: React.ChangeEvent<HTMLInputElement>) => {
@@ -524,14 +510,6 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
             isValid = false;
         }
 
-        // Email(이름) 검사 - 단순히 비어있지 않은지만 확인
-        const providedEmail = emailInput.current?.value.trim();
-        if (!providedEmail) {
-            setEmailError(formatMessage({id: 'signup_user_completed.required', defaultMessage: 'This field is required'}));
-            telemetryEvents.errors.push({field: 'email', rule: 'not_provided'});
-            isValid = false;
-        }
-
         // 비밀번호 검사
         const providedPassword = passwordInput.current?.value ?? '';
         const {error, telemetryErrorIds} = isValidPassword(providedPassword, passwordConfig, intl);
@@ -561,19 +539,17 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
 
         if (isUserValid()) {
             setNameError('');
-            setEmailError('');
             setPasswordError('');
             setServerError('');
             setIsWaiting(true);
 
             const employeeId = nameInput.current?.value.trim();
-            const fullName = emailInput.current?.value.trim();
 
             const user = {
                 email: `${employeeId}@kbfg.com`,  // 필수 필드이므로 임시 이메일 생성
                 username: employeeId.toLowerCase(),  // 사번을 username으로 저장
                 password: passwordInput.current?.value,
-                first_name: fullName,  // 전체 이름을 first_name에 저장
+                first_name: '',  // 전체 이름을 first_name에 저장
                 last_name: '',  // 사용하지 않음
                 props: {
                     nickname_disabled: 'true',  // 닉네임 변경 비활성화
@@ -696,20 +672,14 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
             );
         }
 
-        let emailCustomLabelForInput: CustomMessageInputType = parsedEmail ? {
+        let nameCustomLabelForInput: CustomMessageInputType = {
             type: ItemStatus.INFO,
-            value: formatMessage(
-                {
-                    id: 'signup_user_completed.emailIs',
-                    defaultMessage: "You'll use this address to sign in to {siteName}.",
-                },
-                {siteName: SiteName},
-            ),
-        } : null;
+            value: 'K, MI, MT로 시작하는 7글자 사번을 입력해주세요.(대소문자 구분 없음.)',
+        };
 
         // error will have preference over info message
-        if (emailError) {
-            emailCustomLabelForInput = {type: ItemStatus.ERROR, value: emailError};
+        if (nameError) {
+            nameCustomLabelForInput = {type: ItemStatus.ERROR, value: nameError};
         }
 
         return (
@@ -759,22 +729,6 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
                             {enableSignUpWithEmail && (
                                 <form className='signup-body-card-form'>
                                     <Input
-                                        data-testid='signup-body-card-form-email-input'
-                                        ref={emailInput}
-                                        name='email'
-                                        className='signup-body-card-form-email-input'
-                                        type='text'
-                                        inputSize={SIZE.LARGE}
-                                        value={email}
-                                        onChange={handleEmailOnChange}
-                                        placeholder='Full Name'
-                                        aria-label='Full Name'
-                                        disabled={isWaiting || Boolean(parsedEmail)}
-                                        autoFocus={true}
-                                        customMessage={emailCustomLabelForInput}
-                                        onBlur={(e) => handleOnBlur(e, 'email')}
-                                    />
-                                    <Input
                                         data-testid='signup-body-card-form-name-input'
                                         ref={nameInput}
                                         name='name'
@@ -786,13 +740,8 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
                                         placeholder='Employee ID'
                                         aria-label='Employee ID'
                                         disabled={isWaiting}
-                                        autoFocus={Boolean(parsedEmail)}
-                                        customMessage={
-                                            nameError ? {type: ItemStatus.ERROR, value: nameError} : {
-                                                type: ItemStatus.INFO,
-                                                value: 'K, MI, MT로 시작하는 7글자 사번을 입력해주세요.(대소문자 구분 없음.)',
-                                            }
-                                        }
+                                        autoFocus={true}
+                                        customMessage={nameCustomLabelForInput}
                                         onBlur={(e) => handleOnBlur(e, 'username')}
                                     />
                                     <PasswordInput
