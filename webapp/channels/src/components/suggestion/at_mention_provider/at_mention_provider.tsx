@@ -397,7 +397,7 @@ export default class AtMentionProvider extends Provider {
     }
 
     // updateMatches invokes the resultCallback with the metadata for rendering at mentions
-    updateMatches(resultCallback: ResultsCallback, items: any[]) {
+    updateMatches(resultCallback: ResultsCallback, matchedItems: any[]) {
         const filteredMembers = this.localMembers();
         const filteredPriorityProfiles = this.filterPriorityProfiles();
         const filteredGroups = this.localGroups();
@@ -405,12 +405,12 @@ export default class AtMentionProvider extends Provider {
         const remoteGroups = this.remoteGroups();
         const remoteNonMembers = this.remoteNonMembers();
 
-        let items: any[] = [];
+        let resultItems: any[] = [];
 
         if (this.latestPrefix === '') {
-            items = special;
+            resultItems = special;
         } else if (this.latestPrefix) {
-            items = items.concat(special);
+            resultItems = resultItems.concat(special);
 
             // 사용자들을 이름으로 그룹화
             const allProfiles = [
@@ -425,11 +425,11 @@ export default class AtMentionProvider extends Provider {
             // 각 이름 그룹에서 첫 번째 프로필만 표시하되, 동일 이름이 여러 개면 선택 가능하도록 표시
             groupedProfiles.forEach((profiles, name) => {
                 if (profiles.length === 1) {
-                    items.push(profiles[0]);
+                    resultItems.push(profiles[0]);
                 } else {
                     // 동일 이름을 가진 사용자들을 하위 항목으로 추가
                     profiles.forEach((profile) => {
-                        items.push({
+                        resultItems.push({
                             ...profile,
                             hasDuplicates: true,
                             duplicateCount: profiles.length
@@ -439,14 +439,14 @@ export default class AtMentionProvider extends Provider {
             });
 
             // 그룹 멘션 추가
-            items = items.concat(filteredGroups);
-            items = items.concat(remoteGroups);
+            resultItems = resultItems.concat(filteredGroups);
+            resultItems = resultItems.concat(remoteGroups);
         }
 
         const mentions: string[] = [];
 
         // Add the textboxId for each suggestions
-        const modifiedItems = items.map((item) => {
+        const modifiedItems = resultItems.map((item) => {
             if (item.username) {
                 mentions.push('@' + item.username);
             } else if (item.name) {
@@ -460,7 +460,7 @@ export default class AtMentionProvider extends Provider {
         resultCallback({
             matchedPretext: `@${this.latestPrefix}`,
             terms: mentions,
-            items: modifiedItems,
+            items: resultItems,
             component: AtMentionSuggestion,
         });
     }
