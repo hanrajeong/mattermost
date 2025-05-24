@@ -523,19 +523,21 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
             telemetryEvents.errors.push({field: 'username', rule: 'invalid_employee_id'});
             isValid = false;
         } else {
-            // Employee ID 중복 체크
+            // Employee ID 중복 체크 (username으로 체크)
             try {
-                const response = await fetch('/api/v4/users/employeeid/' + providedUsername);
+                const response = await fetch('/api/v4/users/username/' + providedUsername.toLowerCase());
                 if (response.status === 200) {
                     setNameError(formatMessage({id: 'signup_user_completed.employeeIdExists', defaultMessage: 'This Employee ID is already in use'}));
                     telemetryEvents.errors.push({field: 'username', rule: 'employee_id_exists'});
                     isValid = false;
                 }
             } catch (error) {
-                console.error('Error checking Employee ID:', error);
-                setNameError(formatMessage({id: 'signup_user_completed.serverError', defaultMessage: 'An error occurred while checking Employee ID'}));
-                telemetryEvents.errors.push({field: 'username', rule: 'server_error'});
-                isValid = false;
+                if (error instanceof Error && error.message !== 'Not Found') {
+                    console.error('Error checking Employee ID:', error);
+                    setNameError(formatMessage({id: 'signup_user_completed.serverError', defaultMessage: 'An error occurred while checking Employee ID'}));
+                    telemetryEvents.errors.push({field: 'username', rule: 'server_error'});
+                    isValid = false;
+                }
             }
         }
 
