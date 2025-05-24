@@ -486,7 +486,7 @@ export default class AtMentionProvider extends Provider {
         resultCallback({
             matchedPretext: `@${this.latestPrefix}`,
             terms: mentions,
-            items: resultItems,
+            items: modifiedItems, // 중요: filteredItems를 적용한 modifiedItems를 사용해야 함
             component: AtMentionSuggestion,
         });
     }
