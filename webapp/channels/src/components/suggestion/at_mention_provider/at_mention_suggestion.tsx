@@ -123,19 +123,27 @@ const AtMentionSuggestion = React.forwardRef<HTMLLIElement, SuggestionProps<Item
             </span>
         );
     } else {
-        // 사번(사용자이름) 형식으로 표시하도록 변경
+        // 사용자 이름 가져오기
         const fullName = Utils.getFullName(item);
-        const displayName = fullName || item.username;
         
-        // 현재 사용자의 이름과 사번을 함께 표시
-        itemname = displayName;
+        // 실제 이름을 우선하여 표시, 없으면 사번 표시
+        itemname = fullName || item.username;
         
+        // 사번 표시 로직
         if (item.isCurrentUser) {
-            description = <span>{item.username}</span>;
+            description = <span>@{item.username}</span>;
         } else {
-            // 사번을 description에 표시
-            description = <span>{item.username}{item.nickname ? ` (${item.nickname})` : ''}</span>;
+            // 사번과 닉네임을 description에 표시
+            description = <span>@{item.username}{item.nickname ? ` (${item.nickname})` : ''}</span>;
         }
+        
+        // 디버깅용 로그 추가
+        console.log('Profile for mention:', {
+            username: item.username,
+            fullName,
+            first_name: item.first_name,
+            last_name: item.last_name
+        });
         
         // 중복 사용자 표시
         if (item.hasDuplicates) {

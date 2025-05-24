@@ -113,7 +113,7 @@ export default class AtMentionProvider extends Provider {
             return [];
         }
 
-        return ['here', 'channel', 'all'].filter((item) =>
+        return ['all'].filter((item) =>
             item.startsWith(this.latestPrefix),
         ).map((name) => ({
             username: name,
@@ -180,41 +180,18 @@ export default class AtMentionProvider extends Provider {
     }
 
     // 동일한 이름을 가진 사용자들을 그룹화
-    private groupProfilesByName(profiles: UserProfile[]): UserProfile[] {
-        const groupedProfiles: {[key: string]: UserProfile[]} = {};
+    private groupProfilesByName(profiles: UserProfile[]): Map<string, UserProfile[]> {
+        const groupedProfiles = new Map<string, UserProfile[]>();
 
         profiles.forEach((profile) => {
             const name = profile.first_name || profile.username;
-            if (!groupedProfiles[name]) {
-                groupedProfiles[name] = [];
+            if (!groupedProfiles.has(name)) {
+                groupedProfiles.set(name, []);
             }
-            groupedProfiles[name].push(profile);
+            groupedProfiles.get(name)?.push(profile);
         });
 
-        const sortedProfiles: UserProfile[] = [];
-        Object.entries(groupedProfiles).forEach(([name, group]) => {
-            if (group.length === 1) {
-                sortedProfiles.push(group[0]);
-            } else {
-                // Sort by username within the group
-                group.sort((a, b) => a.username.localeCompare(b.username));
-                
-                // Add the first profile with duplicate indicator
-                const firstProfile = {...group[0]};
-                (firstProfile as any).hasDuplicates = true;
-                (firstProfile as any).duplicateCount = group.length;
-                sortedProfiles.push(firstProfile);
-
-                // Add the rest of the profiles as duplicate items
-                for (let i = 1; i < group.length; i++) {
-                    const profile = {...group[i]};
-                    (profile as any).isDuplicateItem = true;
-                    sortedProfiles.push(profile);
-                }
-            }
-        });
-
-        return sortedProfiles;
+        return groupedProfiles;
     }
 
     // filterGroup constrains group mentions to those matching the latest prefix.
@@ -405,11 +382,9 @@ export default class AtMentionProvider extends Provider {
         const remoteGroups = this.remoteGroups();
         const remoteNonMembers = this.remoteNonMembers();
 
-        // 특수 멘션 명령어 정의 (@all, @channel, @here)
+        // 특수 멘션 명령어 정의 (@all만 사용)
         const special = [
             {username: 'all', type: Constants.MENTION_SPECIAL},
-            {username: 'channel', type: Constants.MENTION_SPECIAL},
-            {username: 'here', type: Constants.MENTION_SPECIAL},
         ];
         
         let resultItems: any[] = [];
@@ -431,17 +406,27 @@ export default class AtMentionProvider extends Provider {
 
             // 각 이름 그룹에서 첫 번째 프로필만 표시하되, 동일 이름이 여러 개면 선택 가능하도록 표시
             groupedProfiles.forEach((profiles, name) => {
+                // 사용자 이름 기준으로 정렬
+                profiles.sort((a, b) => a.username.localeCompare(b.username));
+                
                 if (profiles.length === 1) {
                     resultItems.push(profiles[0]);
                 } else {
-                    // 동일 이름을 가진 사용자들을 하위 항목으로 추가
-                    profiles.forEach((profile) => {
-                        resultItems.push({
-                            ...profile,
-                            hasDuplicates: true,
-                            duplicateCount: profiles.length
-                        });
+                    // 동일 이름을 가진 사용자들을 추가
+                    // 첫 번째 사용자는 중복 표시
+                    resultItems.push({
+                        ...profiles[0],
+                        hasDuplicates: true,
+                        duplicateCount: profiles.length
                     });
+                    
+                    // 나머지 사용자들도 추가
+                    for (let i = 1; i < profiles.length; i++) {
+                        resultItems.push({
+                            ...profiles[i],
+                            isDuplicateItem: true
+                        });
+                    }
                 }
             });
 
@@ -452,9 +437,20 @@ export default class AtMentionProvider extends Provider {
 
         const mentions: string[] = [];
 
+        // 디버깅 로그 추가
+        console.log('All items before processing:', resultItems);
+    
         // Add the textboxId for each suggestions
         const modifiedItems = resultItems.map((item) => {
+            // 프로필 정보 디버깅 로그
             if (item.username) {
+                console.log('Profile details:', {
+                    username: item.username,
+                    first_name: item.first_name,
+                    last_name: item.last_name,
+                    fullName: item.first_name && item.last_name ? `${item.first_name} ${item.last_name}` : '',
+                    type: item.type
+                });
                 mentions.push('@' + item.username);
             } else if (item.name) {
                 mentions.push('@' + item.name);
