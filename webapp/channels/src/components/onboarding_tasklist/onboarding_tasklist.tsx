@@ -8,7 +8,6 @@ import styled, {css} from 'styled-components';
 
 import {CloseIcon, PlaylistCheckIcon} from '@mattermost/compass-icons/components';
 
-// import {getPrevTrialLicense} from 'mattermost-redux/actions/admin';
 import {getMyPreferences, savePreferences} from 'mattermost-redux/actions/preferences';
 import {getConfig} from 'mattermost-redux/selectors/entities/general';
 import {
@@ -130,11 +129,10 @@ const OnBoardingTaskList = (): JSX.Element | null => {
     const hasPreferences = useSelector((state: GlobalState) => Object.keys(getMyPreferencesSelector(state)).length !== 0);
 
     useEffect(() => {
-        dispatch(getPrevTrialLicense());
         if (!hasPreferences) {
             dispatch(getMyPreferences());
         }
-    }, []);
+    }, [hasPreferences]);
 
     const open = useSelector(((state: GlobalState) => getBool(state, OnboardingTaskCategory, OnboardingTaskList.ONBOARDING_TASK_LIST_OPEN)));
     const [trigger, setTrigger] = useState<HTMLButtonElement | null>(null);
