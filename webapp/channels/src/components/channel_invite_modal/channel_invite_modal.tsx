@@ -252,7 +252,7 @@ const ChannelInviteModalComponent = (props: Props) => {
     }, [props.actions, props.channel, setUsersLoadingState]);
 
     // Handle form submission
-    const handleSubmit = useCallback(() => {
+    const handleSubmit = useCallback(async () => {
         const {actions, channel} = props;
 
         const userIds = selectedUsers
@@ -274,20 +274,31 @@ const ChannelInviteModalComponent = (props: Props) => {
 
         setSaving(true);
 
-        // 모든 사용자 ID를 한 번에 처리
-        actions.addUsersToChannel(channel.id, userIds)
-            .then((result: ActionResult) => {
-                if (result.error) {
-                    handleInviteError(result.error);
-                } else {
-                    setSaving(false);
-                    setInviteError(undefined);
-                    onHide();
+        // 사용자를 채널에 추가하기 위한 상세 구현
+        try {
+            const addUserPromises = userIds.map(async (userId: string) => {
+                try {
+                    // Client4 API를 사용하여 직접 추가
+                    return await Client4.addToChannel(userId, channel.id);
+                } catch (err) {
+                    console.error('Error adding user to channel:', err);
+                    return null;
                 }
-            })
-            .catch((error: Error) => {
-                handleInviteError(error);
             });
+
+            const results = await Promise.all(addUserPromises);
+            const validResults = results.filter(Boolean);
+
+            if (validResults.length === 0) {
+                handleInviteError(new Error('Failed to add users to channel'));
+            } else {
+                setSaving(false);
+                setInviteError(undefined);
+                onHide();
+            }
+        } catch (error) {
+            handleInviteError(error as Error);
+        }
     }, [props, selectedUsers, handleInviteError, onHide]);
 
     // Handle search
