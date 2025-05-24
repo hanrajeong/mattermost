@@ -81,14 +81,7 @@ mkdir -p client
 
 # dist 파일 복사
 echo "Copying dist files to client directory..."
-find webapp/channels/dist -type f -exec cp -v {} client/ \;
-
-# root.html 복사 및 처리
-echo "Processing and copying root.html..."
-sed 's/<%=.*%>//' webapp/channels/src/root.html > client/root.html || {
-    echo "Error processing root.html"
-    exit 1
-}
+cp -rv webapp/channels/dist/* client/
 
 echo "Starting Mattermost server..."
 cd $MATTERMOST_ROOT
