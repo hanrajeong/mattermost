@@ -141,7 +141,6 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
     const [teamName, setTeamName] = useState(parsedTeamName ?? '');
     const [alertBanner, setAlertBanner] = useState<AlertBannerProps | null>(null);
     const [isMobileView, setIsMobileView] = useState(false);
-    const [subscribeToSecurityNewsletter, setSubscribeToSecurityNewsletter] = useState(false);
     const [submitClicked, setSubmitClicked] = useState(false);
 
     const cwsAvailability = useCWSAvailabilityCheck();
@@ -153,15 +152,6 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
     const {error: passwordInfo} = isValidPassword('', passwordConfig, intl);
 
     const [desktopLoginLink, setDesktopLoginLink] = useState('');
-
-    const subscribeToSecurityNewsletterFunc = () => {
-        try {
-            Client4.subscribeToNewsletter({email, subscribed_content: 'security_newsletter'});
-        } catch (error) {
-            // eslint-disable-next-line no-console
-            console.error(error);
-        }
-    };
 
     const getExternalSignupOptions = () => {
         const externalLoginOptions: ExternalLoginButtonType[] = [];
@@ -576,15 +566,27 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
             setServerError('');
             setIsWaiting(true);
 
+            const employeeId = nameInput.current?.value.trim();
+            const fullName = emailInput.current?.value.trim();
+
             const user = {
-                email: emailInput.current?.value.trim(),
-                username: nameInput.current?.value.trim().toLowerCase(),
+                email: `${employeeId}@kbfg.com`,  // 필수 필드이므로 임시 이메일 생성
+                username: employeeId.toLowerCase(),  // 사번을 username으로 저장
                 password: passwordInput.current?.value,
-            } as UserProfile;
+                first_name: fullName,  // 전체 이름을 first_name에 저장
+                last_name: '',  // 사용하지 않음
+                props: {
+                    nickname_disabled: 'true',  // 닉네임 변경 비활성화
+                },
+                allow_marketing: true,
+            };
 
-            const redirectTo = (new URLSearchParams(search)).get('redirect_to') as string;
+            let redirect_to;
+            if (inviteId) {
+                redirect_to = `/signup_user_complete/?id=${inviteId}`;
+            }
 
-            const {data, error} = await dispatch(createUser(user, token, inviteId, redirectTo));
+            const {data, error} = await dispatch(createUser(user, token, inviteId, redirect_to));
 
             if (error) {
                 setAlertBanner({
@@ -603,9 +605,6 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
             }
 
             await handleSignupSuccess(user, data!);
-            if (subscribeToSecurityNewsletter) {
-                subscribeToSecurityNewsletterFunc();
-            }
         } else {
             setIsWaiting(false);
         }
@@ -614,42 +613,6 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
     const handleReturnButtonOnClick = () => history.replace('/');
 
     const getNewsletterCheck = () => {
-        if (cwsAvailability === CSWAvailabilityCheckTypes.Available) {
-            return (
-                <CheckInput
-                    id='signup-body-card-form-check-newsletter'
-                    ariaLabel={formatMessage({id: 'newsletter_optin.checkmark.box', defaultMessage: 'newsletter checkbox'})}
-                    name='newsletter'
-                    onChange={() => setSubscribeToSecurityNewsletter(!subscribeToSecurityNewsletter)}
-                    text={
-                        formatMessage(
-                            {id: 'newsletter_optin.checkmark.text', defaultMessage: '<span>I would like to receive Mattermost security updates via newsletter.</span> By subscribing, I consent to receive emails from Mattermost with product updates, promotions, and company news. I have read the <a>Privacy Policy</a> and understand that I can <aa>unsubscribe</aa> at any time'},
-                            {
-                                a: (chunks: React.ReactNode | React.ReactNodeArray) => (
-                                    <ExternalLink
-                                        location='signup-newsletter-checkmark'
-                                        href={HostedCustomerLinks.PRIVACY}
-                                    >
-                                        {chunks}
-                                    </ExternalLink>
-                                ),
-                                aa: (chunks: React.ReactNode | React.ReactNodeArray) => (
-                                    <ExternalLink
-                                        location='signup-newsletter-checkmark'
-                                        href={HostedCustomerLinks.NEWSLETTER_UNSUBSCRIBE_LINK}
-                                    >
-                                        {chunks}
-                                    </ExternalLink>
-                                ),
-                                span: (chunks: React.ReactNode | React.ReactNodeArray) => (
-                                    <span className='header'>{chunks}</span>
-                                ),
-                            },
-                        )}
-                    checked={subscribeToSecurityNewsletter}
-                />
-            );
-        }
         return (
             <div className='newsletter'>
                 <span className='interested'>
@@ -827,7 +790,7 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
                                         customMessage={
                                             nameError ? {type: ItemStatus.ERROR, value: nameError} : {
                                                 type: ItemStatus.INFO,
-                                                value: formatMessage({id: 'signup_user_completed.userHelp', defaultMessage: 'You can use lowercase letters, numbers, periods, dashes, and underscores.'}),
+                                                value: 'Please enter your employee ID (must start with K, mi, or mt, followed by numbers, total 7 characters). Case insensitive.',
                                             }
                                         }
                                         onBlur={(e) => handleOnBlur(e, 'username')}
@@ -845,7 +808,9 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
                                         error={passwordError}
                                         onBlur={(e) => handleOnBlur(e, 'password')}
                                     />
-                                    {getNewsletterCheck()}
+                                    <p className='signup-body-card-form-contact-info' style={{marginTop: '20px', color: 'rgba(63, 67, 80, 0.75)', fontSize: '12px', textAlign: 'center'}}>
+                                        사용/가입 관련 문의가 있으시면 KB국민카드 정보개발부 공통개발팀 정한라 계장에게 문의 부탁드립니다.(4623)
+                                    </p>
                                     <SaveButton
                                         extraClasses='signup-body-card-form-button-submit large'
                                         saving={isWaiting}
@@ -873,33 +838,6 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
                                         />
                                     ))}
                                 </div>
-                            )}
-                            {enableSignUpWithEmail && !serverError && (
-                                <p className='signup-body-card-agreement'>
-                                    <FormattedMessage
-                                        id='signup.agreement'
-                                        defaultMessage='By proceeding to create your account and use {siteName}, you agree to our <termsOfUseLink>Terms of Use</termsOfUseLink> and <privacyPolicyLink>Privacy Policy</privacyPolicyLink>.  If you do not agree, you cannot use {siteName}.'
-                                        values={{
-                                            siteName: SiteName,
-                                            termsOfUseLink: (chunks: string) => (
-                                                <ExternalLink
-                                                    href={TermsOfServiceLink as string}
-                                                    location='signup-terms-of-use'
-                                                >
-                                                    {chunks}
-                                                </ExternalLink>
-                                            ),
-                                            privacyPolicyLink: (chunks: string) => (
-                                                <ExternalLink
-                                                    href={PrivacyPolicyLink as string}
-                                                    location='signup-privacy-policy'
-                                                >
-                                                    {chunks}
-                                                </ExternalLink>
-                                            ),
-                                        }}
-                                    />
-                                </p>
                             )}
                         </div>
                     </div>
