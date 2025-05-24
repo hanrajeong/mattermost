@@ -804,10 +804,8 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
                                         inputSize={SIZE.LARGE}
                                         value={email}
                                         onChange={handleEmailOnChange}
-                                        placeholder={formatMessage({
-                                            id: 'signup_user_completed.emailLabel',
-                                            defaultMessage: 'Full Name',
-                                        })}
+                                        placeholder='Full Name'
+                                        aria-label='Full Name'
                                         disabled={isWaiting || Boolean(parsedEmail)}
                                         autoFocus={true}
                                         customMessage={emailCustomLabelForInput}
@@ -822,10 +820,8 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
                                         inputSize={SIZE.LARGE}
                                         value={name}
                                         onChange={handleNameOnChange}
-                                        placeholder={formatMessage({
-                                            id: 'signup_user_completed.chooseUser',
-                                            defaultMessage: 'Employee Id No.',
-                                        })}
+                                        placeholder='Employee ID'
+                                        aria-label='Employee ID'
                                         disabled={isWaiting}
                                         autoFocus={Boolean(parsedEmail)}
                                         customMessage={
