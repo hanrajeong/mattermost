@@ -109,3 +109,11 @@ export function isEmail(email: string): boolean {
     // this prevents <Outlook Style> outlook.style@domain.com addresses and multiple comma-separated addresses from being accepted
     return (/^[^ ,@]+@[^ ,@]+$/).test(email);
 }
+
+export function isEmployeeId(id: string): boolean {
+    // This regex ensures:
+    // - starts with 'K', 'mi', or 'mt' (case insensitive)
+    // - followed by numbers
+    // - total length must be 7 characters
+    return /^(k|mi|mt)\d+$/i.test(id) && id.length === 7;
+}

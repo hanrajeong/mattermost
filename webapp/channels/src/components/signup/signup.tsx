@@ -18,7 +18,7 @@ import {Client4} from 'mattermost-redux/client';
 import {getConfig, getLicense, getPasswordConfig} from 'mattermost-redux/selectors/entities/general';
 import {getIsOnboardingFlowEnabled} from 'mattermost-redux/selectors/entities/preferences';
 import {getCurrentUserId} from 'mattermost-redux/selectors/entities/users';
-import {isEmail} from 'mattermost-redux/utils/helpers';
+import {isEmail, isEmployeeId} from 'mattermost-redux/utils/helpers';
 
 import {redirectUserToDefaultTeam} from 'actions/global_actions';
 import {removeGlobalItem, setGlobalItem} from 'actions/storage';
@@ -520,54 +520,31 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
 
     const isUserValid = () => {
         let isValid = true;
-
-        const providedEmail = emailInput.current?.value.trim();
         const telemetryEvents: TelemetryErrorList = {errors: [], success: true};
 
+        // Username(사번) 검사
+        const providedUsername = nameInput.current?.value.trim();
+        if (!providedUsername) {
+            setNameError(formatMessage({id: 'signup_user_completed.required', defaultMessage: 'This field is required'}));
+            telemetryEvents.errors.push({field: 'username', rule: 'not_provided'});
+            isValid = false;
+        } else if (!isEmployeeId(providedUsername)) {
+            setNameError(formatMessage({id: 'signup_user_completed.validEmployeeId', defaultMessage: 'Please enter a valid employee ID (must start with K, mi, or mt, followed by numbers, total 7 characters)'}));
+            telemetryEvents.errors.push({field: 'username', rule: 'invalid_employee_id'});
+            isValid = false;
+        }
+
+        // Email(이름) 검사 - 단순히 비어있지 않은지만 확인
+        const providedEmail = emailInput.current?.value.trim();
         if (!providedEmail) {
             setEmailError(formatMessage({id: 'signup_user_completed.required', defaultMessage: 'This field is required'}));
             telemetryEvents.errors.push({field: 'email', rule: 'not_provided'});
             isValid = false;
-        } else if (!isEmail(providedEmail)) {
-            setEmailError(formatMessage({id: 'signup_user_completed.validEmail', defaultMessage: 'Please enter a valid email address'}));
-            telemetryEvents.errors.push({field: 'email', rule: 'invalid_email'});
-            isValid = false;
         }
 
-        const providedUsername = nameInput.current?.value.trim().toLowerCase();
-
-        if (providedUsername) {
-            const usernameError = isValidUsername(providedUsername);
-
-            if (usernameError) {
-                let nameError = '';
-                if (usernameError.id === ValidationErrors.RESERVED_NAME) {
-                    nameError = formatMessage({id: 'signup_user_completed.reserved', defaultMessage: 'This username is reserved, please choose a new one.'});
-                } else {
-                    nameError = formatMessage(
-                        {
-                            id: 'signup_user_completed.usernameLength',
-                            defaultMessage: 'Usernames have to begin with a lowercase letter and be {min}-{max} characters long. You can use lowercase letters, numbers, periods, dashes, and underscores.',
-                        },
-                        {
-                            min: Constants.MIN_USERNAME_LENGTH,
-                            max: Constants.MAX_USERNAME_LENGTH,
-                        },
-                    );
-                }
-                telemetryEvents.errors.push({field: 'username', rule: usernameError.id.toLowerCase()});
-                setNameError(nameError);
-                isValid = false;
-            }
-        } else {
-            setNameError(formatMessage({id: 'signup_user_completed.required', defaultMessage: 'This field is required'}));
-            telemetryEvents.errors.push({field: 'username', rule: 'not_provided'});
-            isValid = false;
-        }
-
+        // 비밀번호 검사
         const providedPassword = passwordInput.current?.value ?? '';
         const {error, telemetryErrorIds} = isValidPassword(providedPassword, passwordConfig, intl);
-
         if (error) {
             setPasswordError(error as string);
             telemetryEvents.errors = [...telemetryEvents.errors, ...telemetryErrorIds];
@@ -579,7 +556,6 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
         }
 
         sendSignUpTelemetryEvents('validate_user', telemetryEvents);
-
         return isValid;
     };
 
@@ -830,7 +806,7 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
                                         onChange={handleEmailOnChange}
                                         placeholder={formatMessage({
                                             id: 'signup_user_completed.emailLabel',
-                                            defaultMessage: 'Email address',
+                                            defaultMessage: 'Full Name',
                                         })}
                                         disabled={isWaiting || Boolean(parsedEmail)}
                                         autoFocus={true}
@@ -848,7 +824,7 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
                                         onChange={handleNameOnChange}
                                         placeholder={formatMessage({
                                             id: 'signup_user_completed.chooseUser',
-                                            defaultMessage: 'Choose a Username',
+                                            defaultMessage: 'Employee Id No.',
                                         })}
                                         disabled={isWaiting}
                                         autoFocus={Boolean(parsedEmail)}
