@@ -109,6 +109,7 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
     const onboardingFlowEnabled = useSelector(getIsOnboardingFlowEnabled);
     const usedBefore = useSelector((state: GlobalState) => (!inviteId && !loggedIn && token ? getGlobalItem(state, token, null) : undefined));
 
+    const emailInput = useRef<HTMLInputElement>(null);
     const nameInput = useRef<HTMLInputElement>(null);
     const passwordInput = useRef<HTMLInputElement>(null);
 
@@ -127,26 +128,26 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
 
     const noOpenServer = !inviteId && !token && !enableOpenServer && !noAccounts && !enableUserCreation;
 
-    const [employeeId, setEmployeeId] = useState(parsedData.name ?? '');
-    const [userName, setUserName] = useState('');
+    const [email, setEmail] = useState(parsedEmail ?? '');
+    const [name, setName] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(Boolean(inviteId));
     const [isWaiting, setIsWaiting] = useState(false);
-    const [alertBanner, setAlertBanner] = useState<AlertBannerProps | null>(null);
-    const [employeeIdError, setEmployeeIdError] = useState('');
+    const [emailError, setEmailError] = useState('');
     const [nameError, setNameError] = useState('');
     const [passwordError, setPasswordError] = useState('');
     const [brandImageError, setBrandImageError] = useState(false);
     const [serverError, setServerError] = useState('');
     const [teamName, setTeamName] = useState(parsedTeamName ?? '');
+    const [alertBanner, setAlertBanner] = useState<AlertBannerProps | null>(null);
     const [isMobileView, setIsMobileView] = useState(false);
     const [submitClicked, setSubmitClicked] = useState(false);
 
     const cwsAvailability = useCWSAvailabilityCheck();
 
     const enableExternalSignup = enableSignUpWithGitLab || enableSignUpWithOffice365 || enableSignUpWithGoogle || enableSignUpWithOpenId || enableLDAP || enableSAML;
-    const hasError = Boolean(nameError || passwordError || serverError || alertBanner);
-    const canSubmit = Boolean(employeeId && userName && password) && !hasError && !loading;
+    const hasError = Boolean(emailError || nameError || passwordError || serverError || alertBanner);
+    const canSubmit = Boolean(email && name && password) && !hasError && !loading;
     const passwordConfig = useSelector(getPasswordConfig);
     const {error: passwordInfo} = isValidPassword('', passwordConfig, intl);
 
@@ -364,14 +365,16 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
 
     useEffect(() => {
         if (submitClicked) {
-            if (nameError && nameInput.current) {
+            if (emailError && emailInput.current) {
+                emailInput.current.focus();
+            } else if (nameError && nameInput.current) {
                 nameInput.current.focus();
             } else if (passwordError && passwordInput.current) {
                 passwordInput.current.focus();
             }
             setSubmitClicked(false);
         }
-    }, [nameError, passwordError, submitClicked]);
+    }, [emailError, nameError, passwordError, submitClicked]);
 
     if (loading) {
         return (<LoadingScreen/>);
@@ -415,352 +418,449 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
         );
     };
 
-const dismissAlert = () => {
-    setAlertBanner(null);
-};
+    const handleEmailOnChange = ({target: {value: email}}: React.ChangeEvent<HTMLInputElement>) => {
+        setEmail(email);
+        dismissAlert();
 
-const isUserValid = () => {
-    const providedEmployeeId = employeeId;
-    if (!providedEmployeeId) {
-        setEmployeeIdError('Employee ID is required');
-        return {
-            isValid: false,
-            error: {
-                field: 'employeeId',
-                rule: 'Employee ID is required',
-            },
-        };
-    }
-
-    if (!isEmployeeId(providedEmployeeId)) {
-        setEmployeeIdError('Invalid Employee ID format');
-        return {
-            isValid: false,
-            error: {
-                field: 'employeeId',
-                rule: 'Invalid Employee ID format',
-            },
-        };
-    }
-
-    const providedUserName = userName;
-    if (!providedUserName) {
-        setNameError('User name is required');
-        return {
-            isValid: false,
-            error: {
-                field: 'userName',
-                rule: 'User name is required',
-            },
-        };
-    }
-
-    return { isValid: true };
-};
-
-const handleSignupSuccess = async (user: UserProfile, data: UserProfile) => {
-    trackEvent('signup', 'signup_user_02_complete', getRoleFromTrackFlow());
-
-    const {error} = await dispatch(loginById(data.id, user.password));
-    if (error) {
-        setServerError(error.message);
-        setIsWaiting(false);
-        return;
-    }
-
-    await postSignupSuccess();
-};
-
-const postSignupSuccess = async () => {
-    await dispatch(loadMe());
-    if (onboardingFlowEnabled) {
-        history.push('/');
-    } else {
-        redirectUserToDefaultTeam();
-    }
-};
-
-const sendSignUpTelemetryEvents = (telemetryId: string, props?: any) => {
-    trackEvent('signup', telemetryId, props);
-};
-
-const onWindowResize = throttle(() => {
-    setIsMobileView(window.innerWidth < MOBILE_SCREEN_WIDTH);
-}, 100);
-
-useEffect(() => {
-    dispatch(removeGlobalItem('team'));
-    trackEvent('signup', 'signup_user_01_welcome', {...getRoleFromTrackFlow(), ...getMediumFromTrackFlow()});
-
-    onWindowResize();
-
-    window.addEventListener('resize', onWindowResize);
-
-    if (search) {
-        if ((inviteId || token) && loggedIn) {
-            handleAddUserToTeamFromInvite(token, inviteId);
-        } else if (inviteId) {
-            getInviteInfo(inviteId);
-        } else if (loggedIn) {
-            if (onboardingFlowEnabled) {
-                // need info about whether admin or not,
-                // and whether admin has already completed
-                // first tiem onboarding. Instead of fetching and orchestrating that here,
-                // let the default root component handle it.
-                history.push('/');
-            } else {
-                redirectUserToDefaultTeam();
-            }
+        if (emailError) {
+            setEmailError('');
         }
-    }
-
-    return () => {
-        window.removeEventListener('resize', onWindowResize);
     };
-}, []);
 
-useEffect(() => {
-    document.title = formatMessage(
-        {
-            id: 'signup.title',
-            defaultMessage: 'Create Account | {siteName}',
-        },
-        {siteName: SiteName || 'Mattermost'},
-    );
-}, [formatMessage, SiteName]);
+    const handleNameOnChange = ({target: {value: name}}: React.ChangeEvent<HTMLInputElement>) => {
+        setName(name);
+        dismissAlert();
 
-useEffect(() => {
-    if (onCustomizeHeader) {
-        onCustomizeHeader({
-            onBackButtonClick: handleHeaderBackButtonOnClick,
-            alternateLink: isMobileView ? getAlternateLink() : undefined,
-        });
-    }
-}, [onCustomizeHeader, handleHeaderBackButtonOnClick, isMobileView, getAlternateLink, search]);
-
-useEffect(() => {
-    if (submitClicked) {
-        if (nameError && nameInput.current) {
-            nameInput.current.focus();
-        } else if (passwordError && passwordInput.current) {
-            passwordInput.current.focus();
+        if (nameError) {
+            setNameError('');
         }
-        setSubmitClicked(false);
-    }
-}, [nameError, passwordError, submitClicked]);
+    };
 
-if (loading) {
-    return (<LoadingScreen/>);
-}
+    const handlePasswordInputOnChange = ({target: {value: password}}: React.ChangeEvent<HTMLInputElement>) => {
+        setPassword(password);
+        dismissAlert();
 
-const handleBrandImageError = () => {
-    setBrandImageError(true);
-};
+        if (passwordError) {
+            setPasswordError('');
+        }
+    };
 
-const getCardTitle = () => {
-    if (CustomDescriptionText) {
-        return CustomDescriptionText;
-    }
+    const handleSignupSuccess = async (user: UserProfile, data: UserProfile) => {
+        trackEvent('signup', 'signup_user_02_complete', getRoleFromTrackFlow());
 
-    if (!enableSignUpWithEmail && enableExternalSignup) {
-        return formatMessage({id: 'signup_user_completed.cardtitle.external', defaultMessage: 'Create your account with one of the following:'});
-    }
+        if (reminderInterval) {
+            trackEvent('signup', `signup_from_reminder_${reminderInterval}`, {user: user.id});
+        }
 
-    return formatMessage({id: 'signup_user_completed.cardtitle', defaultMessage: 'Create your account'});
-};
+        const redirectTo = (new URLSearchParams(search)).get('redirect_to');
 
-const getMessageSubtitle = () => {
-    if (enableCustomBrand) {
-        return CustomBrandText ? (
-            <div className='signup-body-custom-branding-markdown'>
-                <Markdown
-                    message={CustomBrandText}
-                    options={{mentionHighlight: false}}
-                />
-            </div>
-        ) : null;
-    }
+        const {error} = await dispatch(loginById(data.id, user.password));
 
-    return (
-        <p className='signup-body-message-subtitle'>
-            {formatMessage({
-                id: 'signup_user_completed.subtitle',
-                defaultMessage: 'Create your Mattermost account to start collaborating with your team',
-            })}
-        </p>
-    );
-};
+        if (error) {
+            if (error.server_error_id === 'api.user.login.not_verified.app_error') {
+                let verifyUrl = '/should_verify_email?email=' + encodeURIComponent(user.email);
 
-const handleEmployeeIdOnChange = ({target: {value: id}}: React.ChangeEvent<HTMLInputElement>) => {
-    setEmployeeId(id);
-    setEmployeeIdError('');
-};
+                if (teamName) {
+                    verifyUrl += '&teamname=' + encodeURIComponent(teamName);
+                }
 
-const handleUserNameOnChange = ({target: {value: name}}: React.ChangeEvent<HTMLInputElement>) => {
-    setUserName(name);
-    setNameError('');
-};
+                if (redirectTo) {
+                    verifyUrl += '&redirect_to=' + redirectTo;
+                }
 
-const handlePasswordInputOnChange = ({target: {value: password}}: React.ChangeEvent<HTMLInputElement>) => {
-    setPassword(password);
-    dismissAlert();
+                history.push(verifyUrl);
+            } else {
+                setServerError(error.message);
+                setIsWaiting(false);
+            }
 
-    if (passwordError) {
-        setPasswordError('');
-    }
-};
-
-const handleSubmit = async (e: React.MouseEvent | React.KeyboardEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (isWaiting) {
-        return;
-    }
-
-    setIsWaiting(true);
-
-    const validationResults = isUserValid();
-    if (!validationResults.isValid) {
-        setIsWaiting(false);
-        return;
-    }
-
-    // Check if Employee ID is unique
-    try {
-        const response = await fetch('/api/v4/users/employeeid/' + employeeId);
-        if (response.status === 200) {
-            setEmployeeIdError('This Employee ID is already in use');
-            setIsWaiting(false);
             return;
         }
-    } catch (error) {
-        console.error('Error checking Employee ID:', error);
-    }
 
-    const user = {
-        email: `${employeeId}@kbfg.com`,  // 필수 필드이므로 임시 이메일 생성
-        username: employeeId.toLowerCase(),  // 사번을 username으로 저장
-        password: passwordInput.current?.value,
-        first_name: userName,  // 전체 이름을 first_name에 저장
-        last_name: '',  // 사용하지 않음
-        props: {
-            nickname_disabled: 'true',  // 닉네임 변경 비활성화
-        },
-        allow_marketing: true,
+        await postSignupSuccess();
     };
 
-    let redirect_to;
-    if (inviteId) {
-        redirect_to = `/signup_user_complete/?id=${inviteId}`;
-    }
+    const postSignupSuccess = async () => {
+        const redirectTo = (new URLSearchParams(search)).get('redirect_to');
 
-    const {data, error} = await dispatch(createUser(user, token, inviteId, redirect_to));
+        await dispatch(loadMe());
 
-    if (error) {
-        setAlertBanner({
-            mode: 'danger' as ModeType,
-            title: (error as ServerError).message,
-            onDismiss: dismissAlert,
-        });
-        setIsWaiting(false);
-
-        // Special case for accessibility to show the error message when the username is already taken
-        if (error.server_error_id === 'app.user.save.username_exists.app_error') {
-            setNameError(error.message);
-            setSubmitClicked(true);
+        if (token) {
+            setGlobalItem(token, JSON.stringify({usedBefore: true}));
         }
-        return;
+
+        if (redirectTo) {
+            history.push(redirectTo);
+        } else if (onboardingFlowEnabled) {
+            // need info about whether admin or not,
+            // and whether admin has already completed
+            // first tiem onboarding. Instead of fetching and orchestrating that here,
+            // let the default root component handle it.
+            history.push('/');
+        } else {
+            redirectUserToDefaultTeam();
+        }
+    };
+
+    function sendSignUpTelemetryEvents(telemetryId: string, props?: any) {
+        trackEvent('signup', telemetryId, props);
     }
 
-    await handleSignupSuccess(user, data!);
-};
+    type TelemetryErrorList = {errors: Array<{field: string; rule: string}>; success: boolean};
 
-const handleReturnButtonOnClick = () => history.replace('/');
+    const isUserValid = async () => {
+        let isValid = true;
+        const telemetryEvents: TelemetryErrorList = {errors: [], success: true};
 
-const getNewsletterCheck = () => {
-    return (
-        <div className='newsletter'>
-            <span className='interested'>
-                {formatMessage({id: 'newsletter_optin.title', defaultMessage: 'Interested in receiving Mattermost security, product, promotions, and company updates updates via newsletter?'})}
-            </span>
-            <span className='link'>
-                {formatMessage(
-                    {id: 'newsletter_optin.desc', defaultMessage: 'Sign up at <a>{link}</a>.'},
-                    {
-                        link: HostedCustomerLinks.SECURITY_UPDATES,
-                        a: (chunks: React.ReactNode | React.ReactNodeArray) => (
-                            <ExternalLink
-                                location='signup'
-                                href={HostedCustomerLinks.SECURITY_UPDATES}
+        // Username(사번) 검사
+        const providedUsername = nameInput.current?.value.trim();
+        if (!providedUsername) {
+            setNameError(formatMessage({id: 'signup_user_completed.required', defaultMessage: 'This field is required'}));
+            telemetryEvents.errors.push({field: 'username', rule: 'not_provided'});
+            isValid = false;
+        } else if (!isEmployeeId(providedUsername)) {
+            setNameError(formatMessage({id: 'signup_user_completed.validEmployeeId', defaultMessage: 'Please enter a valid employee ID (must start with K, mi, or mt, followed by numbers, total 7 characters)'}));
+            telemetryEvents.errors.push({field: 'username', rule: 'invalid_employee_id'});
+            isValid = false;
+        } else {
+            // Employee ID 중복 체크
+            try {
+                const response = await fetch('/api/v4/users/employeeid/' + providedUsername);
+                if (response.status === 200) {
+                    setNameError(formatMessage({id: 'signup_user_completed.employeeIdExists', defaultMessage: 'This Employee ID is already in use'}));
+                    telemetryEvents.errors.push({field: 'username', rule: 'employee_id_exists'});
+                    isValid = false;
+                }
+            } catch (error) {
+                console.error('Error checking Employee ID:', error);
+                setNameError(formatMessage({id: 'signup_user_completed.serverError', defaultMessage: 'An error occurred while checking Employee ID'}));
+                telemetryEvents.errors.push({field: 'username', rule: 'server_error'});
+                isValid = false;
+            }
+        }
+
+        // Email(이름) 검사 - 단순히 비어있지 않은지만 확인
+        const providedEmail = emailInput.current?.value.trim();
+        if (!providedEmail) {
+            setEmailError(formatMessage({id: 'signup_user_completed.required', defaultMessage: 'This field is required'}));
+            telemetryEvents.errors.push({field: 'email', rule: 'not_provided'});
+            isValid = false;
+        }
+
+        // 비밀번호 검사
+        const providedPassword = passwordInput.current?.value ?? '';
+        const {error, telemetryErrorIds} = isValidPassword(providedPassword, passwordConfig, intl);
+        if (error) {
+            setPasswordError(error as string);
+            telemetryEvents.errors = [...telemetryEvents.errors, ...telemetryErrorIds];
+            isValid = false;
+        }
+
+        if (telemetryEvents.errors.length) {
+            telemetryEvents.success = false;
+        }
+
+        sendSignUpTelemetryEvents('validate_user', telemetryEvents);
+        return isValid;
+    };
+
+    const dismissAlert = () => {
+        setAlertBanner(null);
+    };
+
+    const handleSubmit = async (e: React.MouseEvent | React.KeyboardEvent) => {
+        e.preventDefault();
+        sendSignUpTelemetryEvents('click_create_account', getRoleFromTrackFlow());
+        setIsWaiting(true);
+        setSubmitClicked(true);
+
+        if (await isUserValid()) {
+            setNameError('');
+            setEmailError('');
+            setPasswordError('');
+            setServerError('');
+            setIsWaiting(true);
+
+            const employeeId = nameInput.current?.value.trim();
+            const fullName = emailInput.current?.value.trim();
+
+            const user = {
+                email: `${employeeId}@kbfg.com`,  // 필수 필드이므로 임시 이메일 생성
+                username: employeeId.toLowerCase(),  // 사번을 username으로 저장
+                password: passwordInput.current?.value,
+                first_name: fullName,  // 전체 이름을 first_name에 저장
+                last_name: '',  // 사용하지 않음
+                props: {
+                    nickname_disabled: 'true',  // 닉네임 변경 비활성화
+                },
+                allow_marketing: true,
+            };
+
+            let redirect_to;
+            if (inviteId) {
+                redirect_to = `/signup_user_complete/?id=${inviteId}`;
+            }
+
+            const {data, error} = await dispatch(createUser(user, token, inviteId, redirect_to));
+
+            if (error) {
+                setAlertBanner({
+                    mode: 'danger' as ModeType,
+                    title: (error as ServerError).message,
+                    onDismiss: dismissAlert,
+                });
+                setIsWaiting(false);
+
+                // Special case for accessibility to show the error message when the username is already taken
+                if (error.server_error_id === 'app.user.save.username_exists.app_error') {
+                    setNameError(error.message);
+                    setSubmitClicked(true);
+                }
+                return;
+            }
+
+            await handleSignupSuccess(user, data!);
+        } else {
+            setIsWaiting(false);
+        }
+    };
+
+    const handleReturnButtonOnClick = () => history.replace('/');
+
+    const getNewsletterCheck = () => {
+        return (
+            <div className='newsletter'>
+                <span className='interested'>
+                    {formatMessage({id: 'newsletter_optin.title', defaultMessage: 'Interested in receiving Mattermost security, product, promotions, and company updates updates via newsletter?'})}
+                </span>
+                <span className='link'>
+                    {formatMessage(
+                        {id: 'newsletter_optin.desc', defaultMessage: 'Sign up at <a>{link}</a>.'},
+                        {
+                            link: HostedCustomerLinks.SECURITY_UPDATES,
+                            a: (chunks: React.ReactNode | React.ReactNodeArray) => (
+                                <ExternalLink
+                                    location='signup'
+                                    href={HostedCustomerLinks.SECURITY_UPDATES}
+                                >
+                                    {chunks}
+                                </ExternalLink>
+                            ),
+                        },
+                    )}
+                </span>
+            </div>
+        );
+    };
+
+    const handleOnBlur = (e: FocusEvent<HTMLInputElement | HTMLTextAreaElement>, inputId: string) => {
+        const text = e.target.value;
+        if (!text) {
+            return;
+        }
+        sendSignUpTelemetryEvents(`typed_input_${inputId}`);
+    };
+
+    const getContent = () => {
+        if (!enableSignUpWithEmail && !enableExternalSignup) {
+            return (
+                <ColumnLayout
+                    title={formatMessage({id: 'login.noMethods.title', defaultMessage: 'This server doesn’t have any sign-in methods enabled'})}
+                    message={formatMessage({id: 'login.noMethods.subtitle', defaultMessage: 'Please contact your System Administrator to resolve this.'})}
+                />
+            );
+        }
+
+        if (!isWaiting && (noOpenServer || serverError || usedBefore)) {
+            const titleColumn = noOpenServer ? (
+                formatMessage({id: 'signup_user_completed.no_open_server.title', defaultMessage: 'This server doesn’t allow open signups'})
+            ) : (
+                serverError ||
+                formatMessage({id: 'signup_user_completed.invalid_invite.title', defaultMessage: 'This invite link is invalid'})
+            );
+
+            return (
+                <ColumnLayout
+                    title={titleColumn}
+                    message={formatMessage({id: 'signup_user_completed.invalid_invite.message', defaultMessage: 'Please speak with your Administrator to receive an invitation.'})}
+                    extraContent={(
+                        <div className='signup-body-content-button-container'>
+                            <button
+                                className='signup-body-content-button-return'
+                                onClick={handleReturnButtonOnClick}
                             >
-                                {chunks}
-                            </ExternalLink>
-                        ),
-                    },
-                )}
-            </span>
-        </div>
-    );
-};
+                                {formatMessage({id: 'signup_user_completed.return', defaultMessage: 'Return to log in'})}
+                            </button>
+                        </div>
+                    )}
+                />
+            );
+        }
 
-const handleOnBlur = (e: FocusEvent<HTMLInputElement | HTMLTextAreaElement>, inputId: string) => {
-    const text = e.target.value;
-    if (!text) {
-        return;
-    }
-    sendSignUpTelemetryEvents(`typed_input_${inputId}`);
-};
+        if (desktopLoginLink) {
+            return (
+                <Route
+                    path={'/signup_user_complete/desktop'}
+                    render={() => (
+                        <DesktopAuthToken
+                            href={desktopLoginLink}
+                            onLogin={postSignupSuccess}
+                        />
+                    )}
+                />
+            );
+        }
 
-const getContent = () => {
-    if (!enableSignUpWithEmail && !enableExternalSignup) {
+        let emailCustomLabelForInput: CustomMessageInputType = parsedEmail ? {
+            type: ItemStatus.INFO,
+            value: formatMessage(
+                {
+                    id: 'signup_user_completed.emailIs',
+                    defaultMessage: "You'll use this address to sign in to {siteName}.",
+                },
+                {siteName: SiteName},
+            ),
+        } : null;
+
+        // error will have preference over info message
+        if (emailError) {
+            emailCustomLabelForInput = {type: ItemStatus.ERROR, value: emailError};
+        }
+
         return (
-            <ColumnLayout
-                title={formatMessage({id: 'login.noMethods.title', defaultMessage: 'This server doesn’t have any sign-in methods enabled'})}
-                message={formatMessage({id: 'login.noMethods.subtitle', defaultMessage: 'Please contact your System Administrator to resolve this.'})}
-            />
-        );
-    }
-
-    if (!isWaiting && (noOpenServer || serverError || usedBefore)) {
-        const titleColumn = noOpenServer ? (
-            formatMessage({id: 'signup_user_completed.no_open_server.title', defaultMessage: 'This server doesn’t allow open signups'})
-        ) : (
-            serverError ||
-            formatMessage({id: 'signup_user_completed.invalid_invite.title', defaultMessage: 'This invite link is invalid'})
-        );
-
-        return (
-            <ColumnLayout
-                title={titleColumn}
-                message={formatMessage({id: 'signup_user_completed.invalid_invite.message', defaultMessage: 'Please speak with your Administrator to receive an invitation.'})}
-                extraContent={(
-                    <div className='signup-body-content-button-container'>
-                        <button
-                            className='signup-body-content-button-return'
-                            onClick={handleReturnButtonOnClick}
+            <>
+                <div
+                    className={classNames(
+                        'signup-body-message',
+                        {
+                            'custom-branding': enableCustomBrand,
+                            'with-brand-image': enableCustomBrand && !brandImageError,
+                            'with-alternate-link': !isMobileView,
+                        },
+                    )}
+                >
+                    {enableCustomBrand && !brandImageError ? (
+                        <img
+                            className={classNames('signup-body-custom-branding-image')}
+                            alt='brand image'
+                            src={Client4.getBrandImageUrl('0')}
+                            onError={handleBrandImageError}
+                        />
+                    ) : (
+                        <h1 className='signup-body-message-title'>
+                            {formatMessage({id: 'signup_user_completed.title', defaultMessage: 'Let’s get started'})}
+                        </h1>
+                    )}
+                    {getMessageSubtitle()}
+                </div>
+                <div className='signup-body-action'>
+                    {!isMobileView && getAlternateLink()}
+                    <div className={classNames('signup-body-card', {'custom-branding': enableCustomBrand, 'with-error': hasError})}>
+                        <div
+                            className='signup-body-card-content'
                         >
-                            {formatMessage({id: 'signup_user_completed.return', defaultMessage: 'Return to log in'})}
-                        </button>
+                            <p className='signup-body-card-title'>
+                                {getCardTitle()}
+                            </p>
+                            {enableCustomBrand && getMessageSubtitle()}
+                            {alertBanner && (
+                                <AlertBanner
+                                    className='login-body-card-banner'
+                                    mode={alertBanner.mode}
+                                    title={alertBanner.title}
+                                    onDismiss={alertBanner.onDismiss}
+                                />
+                            )}
+                            {enableSignUpWithEmail && (
+                                <form className='signup-body-card-form'>
+                                    <Input
+                                        data-testid='signup-body-card-form-email-input'
+                                        ref={emailInput}
+                                        name='email'
+                                        className='signup-body-card-form-email-input'
+                                        type='text'
+                                        inputSize={SIZE.LARGE}
+                                        value={email}
+                                        onChange={handleEmailOnChange}
+                                        placeholder='Full Name'
+                                        aria-label='Full Name'
+                                        disabled={isWaiting || Boolean(parsedEmail)}
+                                        autoFocus={true}
+                                        customMessage={emailCustomLabelForInput}
+                                        onBlur={(e) => handleOnBlur(e, 'email')}
+                                    />
+                                    <Input
+                                        data-testid='signup-body-card-form-name-input'
+                                        ref={nameInput}
+                                        name='name'
+                                        className='signup-body-card-form-name-input'
+                                        type='text'
+                                        inputSize={SIZE.LARGE}
+                                        value={name}
+                                        onChange={handleNameOnChange}
+                                        placeholder='Employee ID'
+                                        aria-label='Employee ID'
+                                        disabled={isWaiting}
+                                        autoFocus={Boolean(parsedEmail)}
+                                        customMessage={
+                                            nameError ? {type: ItemStatus.ERROR, value: nameError} : {
+                                                type: ItemStatus.INFO,
+                                                value: 'K, MI, MT로 시작하는 7글자 사번을 입력해주세요.(대소문자 구분 없음.)',
+                                            }
+                                        }
+                                        onBlur={(e) => handleOnBlur(e, 'username')}
+                                    />
+                                    <PasswordInput
+                                        data-testid='signup-body-card-form-password-input'
+                                        ref={passwordInput}
+                                        className='signup-body-card-form-password-input'
+                                        value={password}
+                                        inputSize={SIZE.LARGE}
+                                        onChange={handlePasswordInputOnChange}
+                                        disabled={isWaiting}
+                                        createMode={true}
+                                        info={passwordInfo as string}
+                                        error={passwordError}
+                                        onBlur={(e) => handleOnBlur(e, 'password')}
+                                    />
+                                    <p className='signup-body-card-form-contact-info' style={{marginTop: '20px', color: 'rgba(63, 67, 80, 0.75)', fontSize: '12px', textAlign: 'center'}}>
+                                        사용/가입 관련 문의가 있으시면 KB국민카드 정보개발부 공통개발팀 정한라 계장에게 문의 부탁드립니다.(4623)
+                                    </p>
+                                    <SaveButton
+                                        extraClasses='signup-body-card-form-button-submit large'
+                                        saving={isWaiting}
+                                        disabled={!canSubmit}
+                                        onClick={handleSubmit}
+                                        defaultMessage={formatMessage({id: 'signup_user_completed.create', defaultMessage: 'Create account'})}
+                                        savingMessage={formatMessage({id: 'signup_user_completed.saving', defaultMessage: 'Creating account…'})}
+                                    />
+                                </form>
+                            )}
+                            {enableSignUpWithEmail && enableExternalSignup && (
+                                <div className='signup-body-card-form-divider'>
+                                    <span className='signup-body-card-form-divider-label'>
+                                        {formatMessage({id: 'signup_user_completed.or', defaultMessage: 'or create an account with'})}
+                                    </span>
+                                </div>
+                            )}
+                            {enableExternalSignup && (
+                                <div className={classNames('signup-body-card-form-login-options', {column: !enableSignUpWithEmail})}>
+                                    {getExternalSignupOptions().map((option) => (
+                                        <ExternalLoginButton
+                                            key={option.id}
+                                            direction={enableSignUpWithEmail ? undefined : 'column'}
+                                            {...option}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
-                )}
-            />
+                </div>
+            </>
         );
-    }
+    };
 
-    if (desktopLoginLink) {
-        return (
-            <Route
-                path={'/signup_user_complete/desktop'}
-                render={() => (
-                    <DesktopAuthToken
-                        href={desktopLoginLink}
-                        onLogin={postSignupSuccess}
-                    />
-                )}
-            />
-        );
-    }
     return (
         <div className='signup-body'>
             <div className='signup-body-content'>
