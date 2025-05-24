@@ -439,6 +439,20 @@ export default class AtMentionProvider extends Provider {
 
         // 현재 사용자 및 중복 사용자 제거
         const uniqueUsernames = new Set<string>();
+        
+        // 동명이인 처리를 위한 이름 중복 확인
+        const nameCount = new Map<string, number>();
+        
+        // 먼저 각 사용자의 이름 중복 횟수 계산
+        resultItems.forEach(item => {
+            if (item.type !== Constants.MENTION_SPECIAL && item.id !== this.currentUserId) {
+                const fullName = `${item.first_name} ${item.last_name}`.trim();
+                if (fullName) {
+                    nameCount.set(fullName, (nameCount.get(fullName) || 0) + 1);
+                }
+            }
+        });
+        
         const filteredItems = resultItems.filter(item => {
             // 특수 멘션은 필터링하지 않음
             if (item.type === Constants.MENTION_SPECIAL) {
@@ -460,6 +474,22 @@ export default class AtMentionProvider extends Provider {
             }
             
             return true;
+        }).map(item => {
+            // 오리지널 중복 표시 플래그 제거
+            const { hasDuplicates, duplicateCount, ...cleanItem } = item;
+            
+            // 동명이인 처리 - 이름이 같은 사용자가 있는지 확인
+            const fullName = `${item.first_name} ${item.last_name}`.trim();
+            if (fullName && (nameCount.get(fullName) || 0) > 1) {
+                // 동명이인이 있는 경우 기존 형식대로 표시
+                return {
+                    ...cleanItem,
+                    hasDuplicates: true,  // 동명이인 표시를 위한 플래그
+                    duplicateCount: nameCount.get(fullName) || 0  // 동명이인 수
+                };
+            }
+            
+            return cleanItem;
         });
         
         console.log('Filtered items (removed duplicates and current user):', filteredItems);
