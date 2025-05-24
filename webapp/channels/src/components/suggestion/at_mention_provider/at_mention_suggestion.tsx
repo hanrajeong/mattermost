@@ -123,14 +123,23 @@ const AtMentionSuggestion = React.forwardRef<HTMLLIElement, SuggestionProps<Item
             </span>
         );
     } else {
-        itemname = item.username;
-
+        // 사번(사용자이름) 형식으로 표시하도록 변경
+        const fullName = Utils.getFullName(item);
+        const displayName = fullName || item.username;
+        
+        // 현재 사용자의 이름과 사번을 함께 표시
+        itemname = displayName;
+        
         if (item.isCurrentUser) {
-            if (item.first_name || item.last_name) {
-                description = <span>{Utils.getFullName(item)}</span>;
-            }
-        } else if (item.first_name || item.last_name || item.nickname) {
-            description = <span>{`${Utils.getFullName(item)} ${item.nickname ? `(${item.nickname})` : ''}`.trim()}</span>;
+            description = <span>{item.username}</span>;
+        } else {
+            // 사번을 description에 표시
+            description = <span>{item.username}{item.nickname ? ` (${item.nickname})` : ''}</span>;
+        }
+        
+        // 중복 사용자 표시
+        if (item.hasDuplicates) {
+            description = <span className="has-duplicates">{description} - {item.duplicateCount} 사용자</span>;
         }
 
         icon = (
