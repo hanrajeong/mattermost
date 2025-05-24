@@ -1,5 +1,14 @@
 #!/bin/bash
 
+# Build 옵션 확인
+BUILD_FLAG=false
+for arg in "$@"; do
+    if [ "$arg" = "build" ]; then
+        BUILD_FLAG=true
+        break
+    fi
+done
+
 # PostgreSQL 설정
 PG_CTL="/home/hanra/fshome/sctadm/pgsql/bin/pg_ctl"
 PGDATA="/home/hanra/fshome/sctadm/pgdata"
@@ -31,28 +40,37 @@ else
     echo "No Mattermost process found running"
 fi
 
-echo "Building webapp..."
-cd webapp/channels
+if [ "$BUILD_FLAG" = true ]; then
+    echo "Building webapp..."
+    cd webapp/channels
 
-# Node.js 의존성 설치
-if [ ! -d "node_modules" ]; then
-    echo "Installing Node.js dependencies..."
-    npm install
-fi
+    # Node.js 의존성 설치
+    if [ ! -d "node_modules" ]; then
+        echo "Installing Node.js dependencies..."
+        npm install
+    fi
 
-# 웹앱 빌드
-echo "Building webapp files..."
-npm run build
+    # 웹앱 빌드
+    echo "Building webapp files..."
+    npm run build
 
-cd $MATTERMOST_ROOT
+    cd $MATTERMOST_ROOT
 
-echo "Checking for built webapp..."
-if [ -d "webapp/channels/dist" ]; then
-    echo "Found built webapp files in dist directory"
-    echo "Copying dist files to client directory..."
+    echo "Checking for built webapp..."
+    if [ -d "webapp/channels/dist" ]; then
+        echo "Found built webapp files in dist directory"
+        echo "Copying dist files to client directory..."
+    else
+        echo "Error: Build failed - dist directory not found"
+        exit 1
+    fi
 else
-    echo "Error: Build failed - dist directory not found"
-    exit 1
+    echo "Skipping build process..."
+    if [ ! -d "webapp/channels/dist" ]; then
+        echo "Error: dist directory not found. Please run with 'build' parameter first."
+        exit 1
+    fi
+    echo "Using existing build files from dist directory"
 fi
 # client 디렉토리 생성 (없는 경우)
 mkdir -p client
