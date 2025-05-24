@@ -790,7 +790,7 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
                                         customMessage={
                                             nameError ? {type: ItemStatus.ERROR, value: nameError} : {
                                                 type: ItemStatus.INFO,
-                                                value: 'Please enter your employee ID (must start with K, mi, or mt, followed by numbers, total 7 characters). Case insensitive.',
+                                                value: 'K, MI, MT로 시작하는 7글자 사번을 입력해주세요.(대소문자 구분 없음.)',
                                             }
                                         }
                                         onBlur={(e) => handleOnBlur(e, 'username')}
