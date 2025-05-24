@@ -1,0 +1,26 @@
+.suggestion-list {
+    &__employee-id {
+        color: rgba(var(--center-channel-color-rgb), 0.56);
+        margin-left: 4px;
+        font-size: 12px;
+    }
+
+    &__duplicate-indicator {
+        background-color: rgba(var(--center-channel-color-rgb), 0.08);
+        border-radius: 4px;
+        padding: 0 4px;
+        margin-left: 8px;
+        font-size: 11px;
+        line-height: 16px;
+    }
+
+    &__duplicate-list {
+        margin-left: 24px;
+        padding-left: 8px;
+        border-left: 2px solid rgba(var(--center-channel-color-rgb), 0.08);
+
+        .suggestion-list__item {
+            padding: 6px 12px;
+        }
+    }
+}

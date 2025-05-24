@@ -23,9 +23,14 @@ import * as Utils from 'utils/utils';
 import {SuggestionContainer} from '../suggestion';
 import type {SuggestionProps} from '../suggestion';
 
+import './at_mention_suggestion.scss';
+
 export interface Item extends UserProfile {
     display_name: string;
     name: string;
+    hasDuplicates?: boolean;
+    duplicateCount?: number;
+    isDuplicateItem?: boolean;
     isCurrentUser: boolean;
     type: string;
     textboxId?: string;
@@ -196,10 +201,17 @@ const AtMentionSuggestion = React.forwardRef<HTMLLIElement, SuggestionProps<Item
             {icon}
             <span className='suggestion-list__ellipsis'>
                 <span className='suggestion-list__main'>
-                    {'@' + itemname}
+                    {'@' + (item.first_name || itemname)}
+                    {item.username && item.username !== 'all' && item.username !== 'channel' && item.username !== 'here' && (
+                        <span className='suggestion-list__employee-id'>{'(' + item.username + ')'}</span>
+                    )}
+                    {item.hasDuplicates && !item.isDuplicateItem && (
+                        <span className='suggestion-list__duplicate-indicator'>
+                            {`${item.duplicateCount}명의 동일 이름`}
+                        </span>
+                    )}
                 </span>
                 {item.is_bot && <BotTag/>}
-                {description}
                 {youElement}
                 {customStatus}
                 {sharedIcon}

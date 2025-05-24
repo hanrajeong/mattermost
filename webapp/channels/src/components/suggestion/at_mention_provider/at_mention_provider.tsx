@@ -169,15 +169,52 @@ export default class AtMentionProvider extends Provider {
 
     // filterProfile constrains profiles to those matching the latest prefix.
     filterProfile(profile: UserProfile | UserProfileWithLastViewAt) {
-        if (!profile) {
-            return false;
-        }
-
-        const prefixLower = this.latestPrefix.toLowerCase();
         const profileSuggestions = this.getProfileSuggestions(profile);
-        return profileSuggestions.some((suggestion) =>
-            this.normalizeString(suggestion).startsWith(this.normalizeString(prefixLower)),
-        );
+        const matches = profileSuggestions.filter((suggestion) => {
+            const normalizedSuggestion = this.normalizeString(suggestion);
+            const normalizedTerm = this.normalizeString(this.latestPrefix);
+            return normalizedSuggestion.includes(normalizedTerm);
+        });
+
+        return matches.length > 0;
+    }
+
+    // 동일한 이름을 가진 사용자들을 그룹화
+    private groupProfilesByName(profiles: UserProfile[]): UserProfile[] {
+        const groupedProfiles: {[key: string]: UserProfile[]} = {};
+
+        profiles.forEach((profile) => {
+            const name = profile.first_name || profile.username;
+            if (!groupedProfiles[name]) {
+                groupedProfiles[name] = [];
+            }
+            groupedProfiles[name].push(profile);
+        });
+
+        const sortedProfiles: UserProfile[] = [];
+        Object.entries(groupedProfiles).forEach(([name, group]) => {
+            if (group.length === 1) {
+                sortedProfiles.push(group[0]);
+            } else {
+                // Sort by username within the group
+                group.sort((a, b) => a.username.localeCompare(b.username));
+                
+                // Add the first profile with duplicate indicator
+                const firstProfile = {...group[0]};
+                (firstProfile as any).hasDuplicates = true;
+                (firstProfile as any).duplicateCount = group.length;
+                sortedProfiles.push(firstProfile);
+
+                // Add the rest of the profiles as duplicate items
+                for (let i = 1; i < group.length; i++) {
+                    const profile = {...group[i]};
+                    (profile as any).isDuplicateItem = true;
+                    sortedProfiles.push(profile);
+                }
+            }
+        });
+
+        return sortedProfiles;
     }
 
     // filterGroup constrains group mentions to those matching the latest prefix.
@@ -361,11 +398,51 @@ export default class AtMentionProvider extends Provider {
 
     // updateMatches invokes the resultCallback with the metadata for rendering at mentions
     updateMatches(resultCallback: ResultsCallback, items: any[]) {
-        if (items.length === 0) {
-            this.lastPrefixWithNoResults = this.latestPrefix;
-        } else if (this.lastPrefixWithNoResults === this.latestPrefix) {
-            this.lastPrefixWithNoResults = '';
+        const filteredMembers = this.localMembers();
+        const filteredPriorityProfiles = this.filterPriorityProfiles();
+        const filteredGroups = this.localGroups();
+        const remoteProfiles = this.remoteMembers();
+        const remoteGroups = this.remoteGroups();
+        const remoteNonMembers = this.remoteNonMembers();
+
+        let items: any[] = [];
+
+        if (this.latestPrefix === '') {
+            items = special;
+        } else if (this.latestPrefix) {
+            items = items.concat(special);
+
+            // 사용자들을 이름으로 그룹화
+            const allProfiles = [
+                ...filteredPriorityProfiles,
+                ...filteredMembers,
+                ...remoteProfiles,
+                ...remoteNonMembers
+            ];
+
+            const groupedProfiles = this.groupProfilesByName(allProfiles);
+
+            // 각 이름 그룹에서 첫 번째 프로필만 표시하되, 동일 이름이 여러 개면 선택 가능하도록 표시
+            groupedProfiles.forEach((profiles, name) => {
+                if (profiles.length === 1) {
+                    items.push(profiles[0]);
+                } else {
+                    // 동일 이름을 가진 사용자들을 하위 항목으로 추가
+                    profiles.forEach((profile) => {
+                        items.push({
+                            ...profile,
+                            hasDuplicates: true,
+                            duplicateCount: profiles.length
+                        });
+                    });
+                }
+            });
+
+            // 그룹 멘션 추가
+            items = items.concat(filteredGroups);
+            items = items.concat(remoteGroups);
         }
+
         const mentions: string[] = [];
 
         // Add the textboxId for each suggestions

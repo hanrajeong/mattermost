@@ -33,6 +33,12 @@ import GuestTag from 'components/widgets/tag/guest_tag';
 import TagGroup from 'components/widgets/tag/tag_group';
 
 import Constants, {ModalIdentifiers} from 'utils/constants';
+
+interface ActionResult {
+    error?: Error;
+    data?: any;
+}
+
 import {sortUsersAndGroups} from 'utils/utils';
 
 import GroupOption from './group_option';
@@ -249,8 +255,12 @@ const ChannelInviteModalComponent = (props: Props) => {
     const handleSubmit = useCallback(() => {
         const {actions, channel} = props;
 
-        const userIds = selectedUsers.map((u) => u.id);
+        const userIds = selectedUsers
+            .filter((u: UserProfileValue) => u && typeof u.id === 'string' && u.id.trim() !== '')
+            .map((u: UserProfileValue) => u.id);
+
         if (userIds.length === 0) {
+            setInviteError('No valid users selected');
             return;
         }
 
@@ -264,14 +274,21 @@ const ChannelInviteModalComponent = (props: Props) => {
 
         setSaving(true);
 
-        actions.addUsersToChannel(channel.id, userIds).then((result) => {
-            if (result.error) {
-                handleInviteError(result.error);
+        const addUserPromises = userIds.map((userId: string) => {
+            return actions.addUsersToChannel(channel.id, [userId]);
+        });
+
+        Promise.all(addUserPromises).then((results: ActionResult[]) => {
+            const errors = results.filter((result: ActionResult) => result.error);
+            if (errors.length > 0) {
+                handleInviteError(errors[0].error);
             } else {
                 setSaving(false);
                 setInviteError(undefined);
                 onHide();
             }
+        }).catch((error: Error) => {
+            handleInviteError(error);
         });
     }, [props, selectedUsers, handleInviteError, onHide]);
 
