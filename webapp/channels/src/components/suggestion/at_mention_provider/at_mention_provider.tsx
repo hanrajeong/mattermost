@@ -437,12 +437,35 @@ export default class AtMentionProvider extends Provider {
 
         const mentions: string[] = [];
 
-        // 디버깅 로그 추가
-        console.log('All items before processing:', resultItems);
-    
+        // 현재 사용자 및 중복 사용자 제거
+        const uniqueUsernames = new Set<string>();
+        const filteredItems = resultItems.filter(item => {
+            // 특수 멘션은 필터링하지 않음
+            if (item.type === Constants.MENTION_SPECIAL) {
+                return true;
+            }
+            
+            // 현재 사용자 제외
+            if (item.id === this.currentUserId) {
+                return false;
+            }
+            
+            // 중복 사용자 제거 (사번 기준)
+            if (item.username) {
+                if (uniqueUsernames.has(item.username)) {
+                    return false;
+                }
+                uniqueUsernames.add(item.username);
+                return true;
+            }
+            
+            return true;
+        });
+        
+        console.log('Filtered items (removed duplicates and current user):', filteredItems);
+        
         // Add the textboxId for each suggestions
-        const modifiedItems = resultItems.map((item) => {
-            // 프로필 정보 디버깅 로그
+        const modifiedItems = filteredItems.map((item) => {
             if (item.username) {
                 console.log('Profile details:', {
                     username: item.username,
