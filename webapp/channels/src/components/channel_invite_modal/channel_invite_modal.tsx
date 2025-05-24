@@ -274,22 +274,20 @@ const ChannelInviteModalComponent = (props: Props) => {
 
         setSaving(true);
 
-        const addUserPromises = userIds.map((userId: string) => {
-            return actions.addUsersToChannel(channel.id, [userId]);
-        });
-
-        Promise.all(addUserPromises).then((results: ActionResult[]) => {
-            const errors = results.filter((result: ActionResult) => result.error);
-            if (errors.length > 0) {
-                handleInviteError(errors[0].error);
-            } else {
-                setSaving(false);
-                setInviteError(undefined);
-                onHide();
-            }
-        }).catch((error: Error) => {
-            handleInviteError(error);
-        });
+        // 모든 사용자 ID를 한 번에 처리
+        actions.addUsersToChannel(channel.id, userIds)
+            .then((result: ActionResult) => {
+                if (result.error) {
+                    handleInviteError(result.error);
+                } else {
+                    setSaving(false);
+                    setInviteError(undefined);
+                    onHide();
+                }
+            })
+            .catch((error: Error) => {
+                handleInviteError(error);
+            });
     }, [props, selectedUsers, handleInviteError, onHide]);
 
     // Handle search
