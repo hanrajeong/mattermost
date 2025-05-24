@@ -108,8 +108,8 @@ const PreparingWorkspace = ({
     background,
 }: Props) => {
     const dispatch = useDispatch();
-    const intl = useIntl();
-    const genericSubmitError = intl.formatMessage({
+    const {formatMessage} = useIntl();
+    const genericSubmitError = formatMessage({
         id: 'onboarding_wizard.submit_error.generic',
         defaultMessage: 'Something went wrong. Please try again.',
     });
@@ -386,6 +386,36 @@ const PreparingWorkspace = ({
     if (currentStep === firstShowablePage) {
         previous = null;
     }
+
+    useEffect(() => {
+        // Skip organization step and set default name
+        const defaultOrgName = 'KB국민카드';
+        setForm({
+            ...form,
+            organization: defaultOrgName,
+        });
+
+        // Create team with default name
+        const createDefaultTeam = async () => {
+            const {error, newTeam} = await createTeam(defaultOrgName);
+            if (!error && newTeam) {
+                setForm({
+                    ...form,
+                    organization: defaultOrgName,
+                    teamMembers: {
+                        ...form.teamMembers,
+                        inviteId: newTeam.invite_id,
+                    },
+                });
+                // Skip to plugins step
+                setStepHistory([WizardSteps.Organization, WizardSteps.Plugins]);
+            }
+        };
+
+        if (currentStep === WizardSteps.Organization) {
+            createDefaultTeam();
+        }
+    }, [currentStep]);
 
     return (
         <div className='PreparingWorkspace PreparingWorkspaceContainer'>
