@@ -3,18 +3,15 @@
 
 import classNames from 'classnames';
 import throttle from 'lodash/throttle';
-import React, {useCallback, useEffect, useRef, useState} from 'react';
+import React, {useState, useEffect, useRef, useCallback} from 'react';
 import type {FormEvent} from 'react';
 import {useIntl} from 'react-intl';
-import {useDispatch, useSelector} from 'react-redux';
-import {Link, useHistory, useLocation, Route} from 'react-router-dom';
+import {useSelector, useDispatch} from 'react-redux';
+import {Link, useLocation, useHistory, Route} from 'react-router-dom';
 
 import type {Team} from '@mattermost/types/teams';
-import type {AppDispatch} from 'types/store';
 
-import {login} from 'actions/views/login';
 import {loadMe} from 'mattermost-redux/actions/users';
-import {addUserToTeamFromInvite} from 'actions/team_actions';
 import {Client4} from 'mattermost-redux/client';
 import {RequestStatus} from 'mattermost-redux/constants';
 import {getConfig, getLicense} from 'mattermost-redux/selectors/entities/general';
@@ -23,7 +20,9 @@ import {getTeamByName, getMyTeamMember} from 'mattermost-redux/selectors/entitie
 import {getCurrentUser} from 'mattermost-redux/selectors/entities/users';
 
 import {redirectUserToDefaultTeam} from 'actions/global_actions';
+import {addUserToTeamFromInvite} from 'actions/team_actions';
 import {trackEvent} from 'actions/telemetry_actions';
+import {login} from 'actions/views/login';
 import LocalStorageStore from 'stores/local_storage_store';
 
 import AlertBanner from 'components/alert_banner';
@@ -68,7 +67,7 @@ type LoginProps = {
 
 const Login = ({onCustomizeHeader}: LoginProps) => {
     const {formatMessage} = useIntl();
-    const dispatch: AppDispatch = useDispatch();
+    const dispatch = useDispatch();
     const history = useHistory();
     const {pathname, search, hash} = useLocation();
 
@@ -580,65 +579,64 @@ const Login = ({onCustomizeHeader}: LoginProps) => {
             return;
         }
 
-        const submit = async ({loginId, password, token}: SubmitOptions) => {
-            setIsWaiting(true);
-            try {
-                const {error: loginError} = await dispatch(login(loginId, password, token));
-                if (!loginError) {
-                    // 로그인 성공
-                    const {data: team} = await dispatch(loadMe());
-                    finishSignin(team);
-                    return;
-                }
+        submit({loginId, password});
+    };
 
-                // 로그인 실패 처리
+    const submit = async ({loginId, password, token}: SubmitOptions) => {
+        setIsWaiting(true);
+
+        const {error: loginError} = await dispatch(login(loginId, password, token));
+
+        if (loginError && loginError.server_error_id && loginError.server_error_id.length !== 0) {
+            if (loginError.server_error_id === 'api.user.login.not_verified.app_error') {
+                history.push('/should_verify_email?&email=' + encodeURIComponent(loginId));
+            } else if (loginError.server_error_id === 'store.sql_user.get_for_login.app_error' ||
+                loginError.server_error_id === 'ent.ldap.do_login.user_not_registered.app_error') {
                 setShowMfa(false);
                 setIsWaiting(false);
-                setHasError(true);
-
-                if (loginError.server_error_id === 'api.user.login.not_verified.app_error') {
-                    setAlertBanner({
-                        mode: 'danger',
-                        title: formatMessage({
-                            id: 'login.userNotFound',
-                            defaultMessage: "We couldn't find an account matching your login credentials.",
-                        }),
-                    });
-                } else if (loginError.server_error_id === 'api.user.check_user_password.invalid.app_error' ||
-                    loginError.server_error_id === 'ent.ldap.do_login.invalid_password.app_error') {
-                    setAlertBanner({
-                        mode: 'danger',
-                        title: formatMessage({
-                            id: 'login.invalidPassword',
-                            defaultMessage: 'Your password is incorrect.',
-                        }),
-                    });
-                } else if (loginError.server_error_id === 'api.user.login.mfa_required.app_error' && token == null) {
-                    setShowMfa(true);
-                    setIsWaiting(false);
-                    return;
-                } else {
-                    setAlertBanner({
-                        mode: 'danger',
-                        title: formatMessage({
-                            id: 'login.systemError',
-                            defaultMessage: 'An error occurred. Please try again.',
-                        }),
-                    });
-                }
-            } catch (error) {
-                console.error('Login error:', error);
-                setShowMfa(false);
-                setIsWaiting(false);
-                setHasError(true);
                 setAlertBanner({
                     mode: 'danger',
                     title: formatMessage({
-                        id: 'login.systemError',
-                        defaultMessage: 'An error occurred. Please try again.',
+                        id: 'login.userNotFound',
+                        defaultMessage: "We couldn't find an account matching your login credentials.",
                     }),
                 });
+                setHasError(true);
+            } else if (loginError.server_error_id === 'api.user.check_user_password.invalid.app_error' ||
+                loginError.server_error_id === 'ent.ldap.do_login.invalid_password.app_error') {
+                setShowMfa(false);
+                setIsWaiting(false);
+                setAlertBanner({
+                    mode: 'danger',
+                    title: formatMessage({
+                        id: 'login.invalidPassword',
+                        defaultMessage: 'Your password is incorrect.',
+                    }),
+                });
+                setHasError(true);
+            } else if (!showMfa && loginError.server_error_id === 'mfa.validate_token.authenticate.app_error') {
+                setShowMfa(true);
+            } else if (loginError.server_error_id === 'api.user.login.invalid_credentials_email_username') {
+                setShowMfa(false);
+                setIsWaiting(false);
+                setAlertBanner({
+                    mode: 'danger',
+                    title: formatMessage({
+                        id: 'login.invalidCredentials',
+                        defaultMessage: 'The email/username or password is invalid.',
+                    }),
+                });
+                setHasError(true);
+            } else {
+                setShowMfa(false);
+                setIsWaiting(false);
+                setAlertBanner({
+                    mode: 'danger',
+                    title: loginError.message,
+                });
+                setHasError(true);
             }
+            return;
         }
 
         await postSubmit();
@@ -879,7 +877,7 @@ const Login = ({onCustomizeHeader}: LoginProps) => {
                                             value={loginId}
                                             onChange={handleInputOnChange}
                                             hasError={hasError}
-                                            placeholder={formatMessage({id: 'login.employeeId', defaultMessage: '사번'})}
+                                            placeholder={getInputPlaceholder()}
                                             disabled={isWaiting}
                                             autoFocus={true}
                                             aria-describedby={alertBanner ? 'login-body-card-banner' : undefined}

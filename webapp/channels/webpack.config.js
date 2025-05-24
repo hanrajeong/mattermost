@@ -61,14 +61,6 @@ var config = {
     module: {
         rules: [
             {
-                test: /\.html$/,
-                loader: 'html-loader',
-                options: {
-                    sources: false,
-                    minimize: false
-                },
-            },
-            {
                 test: /\.(js|jsx|ts|tsx)$/,
                 exclude: STANDARD_EXCLUDE,
                 use: {
@@ -167,9 +159,10 @@ var config = {
             chunkFilename: '[name].[contenthash].css',
         }),
         new HtmlWebpackPlugin({
+            filename: 'root.html',
+            inject: 'head',
             template: 'src/root.html',
             scriptLoading: 'blocking',
-            inject: true,
             meta: {
                 csp: {
                     'http-equiv': 'Content-Security-Policy',
