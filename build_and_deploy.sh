@@ -44,6 +44,10 @@ if [ "$BUILD_FLAG" = true ]; then
     echo "Building webapp..."
     cd webapp/channels
 
+    # 기존 빌드 파일 정리
+    echo "Cleaning previous build..."
+    rm -rf dist
+
     # Node.js 의존성 설치
     if [ ! -d "node_modules" ]; then
         echo "Installing Node.js dependencies..."
@@ -52,18 +56,15 @@ if [ "$BUILD_FLAG" = true ]; then
 
     # 웹앱 빌드
     echo "Building webapp files..."
-    npm run build
+    NODE_ENV=production npm run build
 
-    cd $MATTERMOST_ROOT
-
-    echo "Checking for built webapp..."
-    if [ -d "webapp/channels/dist" ]; then
-        echo "Found built webapp files in dist directory"
-        echo "Copying dist files to client directory..."
-    else
+    if [ ! -d "dist" ]; then
         echo "Error: Build failed - dist directory not found"
         exit 1
     fi
+
+    echo "Build completed successfully"
+    cd $MATTERMOST_ROOT
 else
     echo "Skipping build process..."
     if [ ! -d "webapp/channels/dist" ]; then
@@ -72,19 +73,20 @@ else
     fi
     echo "Using existing build files from dist directory"
 fi
-echo "Creating client directory..."
+
+# client 디렉토리 준비
+echo "Preparing client directory..."
 rm -rf client
 mkdir -p client
 
+# dist 파일 복사
 echo "Copying dist files to client directory..."
-cp -rv webapp/channels/dist/* client/ || {
-    echo "Error copying dist files"
-    exit 1
-}
+find webapp/channels/dist -type f -exec cp -v {} client/ \;
 
-echo "Copying root.html to client directory..."
-cp -v webapp/channels/src/root.html client/ || {
-    echo "Error copying root.html"
+# root.html 복사 및 처리
+echo "Processing and copying root.html..."
+sed 's/<%=.*%>//' webapp/channels/src/root.html > client/root.html || {
+    echo "Error processing root.html"
     exit 1
 }
 
