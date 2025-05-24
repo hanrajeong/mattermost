@@ -34,7 +34,14 @@ export default function UserProfile({
 }: Props) {
     let name: ReactNode;
     if (user && displayUsername) {
-        name = `@${(user.username)}`;
+        // 사번 대신 실제 이름을 표시하도록 변경
+        const fullName = user.first_name && user.last_name ? 
+            `${user.first_name} ${user.last_name}` : '';
+        
+        // 실제 이름이 있으면 이름(사번) 형식으로 표시, 없으면 사번만 표시
+        name = fullName ? 
+            `${fullName} (@${user.username})` : 
+            `@${user.username}`;
     } else {
         name = overwriteName || displayName || '...';
     }

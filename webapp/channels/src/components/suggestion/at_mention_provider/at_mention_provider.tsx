@@ -405,6 +405,13 @@ export default class AtMentionProvider extends Provider {
         const remoteGroups = this.remoteGroups();
         const remoteNonMembers = this.remoteNonMembers();
 
+        // 특수 멘션 명령어 정의 (@all, @channel, @here)
+        const special = [
+            {username: 'all', type: Constants.MENTION_SPECIAL},
+            {username: 'channel', type: Constants.MENTION_SPECIAL},
+            {username: 'here', type: Constants.MENTION_SPECIAL},
+        ];
+        
         let resultItems: any[] = [];
 
         if (this.latestPrefix === '') {
