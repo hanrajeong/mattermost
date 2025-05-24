@@ -481,33 +481,167 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
         await postSignupSuccess();
     };
 
-    const postSignupSuccess = async () => {
-        const redirectTo = (new URLSearchParams(search)).get('redirect_to');
-        const channelId = (new URLSearchParams(search)).get('channel_id');
 
-        const {data: userData} = await dispatch(loadMe());
+useEffect(() => {
+    document.title = formatMessage(
+        {
+            id: 'signup.title',
+            defaultMessage: 'Create Account | {siteName}',
+        },
+        {siteName: SiteName || 'Mattermost'},
+    );
+}, [formatMessage, SiteName]);
 
-        if (token) {
-            setGlobalItem(token, JSON.stringify({usedBefore: true}));
+useEffect(() => {
+    if (onCustomizeHeader) {
+        onCustomizeHeader({
+            onBackButtonClick: handleHeaderBackButtonOnClick,
+            alternateLink: isMobileView ? getAlternateLink() : undefined,
+        });
+    }
+}, [onCustomizeHeader, handleHeaderBackButtonOnClick, isMobileView, getAlternateLink, search]);
+
+useEffect(() => {
+    if (submitClicked) {
+        if (emailError && emailInput.current) {
+            emailInput.current.focus();
+        } else if (nameError && nameInput.current) {
+            nameInput.current.focus();
+        } else if (passwordError && passwordInput.current) {
+            passwordInput.current.focus();
         }
+        setSubmitClicked(false);
+    }
+}, [emailError, nameError, passwordError, submitClicked]);
 
-        // 채널 초대 처리
-        if (channelId && userData) {
-            const {error} = await dispatch(addChannelMember(channelId, userData.id));
-            if (error) {
-                console.error('Failed to add user to channel:', error);
+if (loading) {
+    return (<LoadingScreen/>);
+}
+
+const handleBrandImageError = () => {
+    setBrandImageError(true);
+};
+
+const getCardTitle = () => {
+    if (CustomDescriptionText) {
+        return CustomDescriptionText;
+    }
+
+    if (!enableSignUpWithEmail && enableExternalSignup) {
+        return formatMessage({id: 'signup_user_completed.cardtitle.external', defaultMessage: 'Create your account with one of the following:'});
+    }
+
+    return formatMessage({id: 'signup_user_completed.cardtitle', defaultMessage: 'Create your account'});
+};
+
+const getMessageSubtitle = () => {
+    if (enableCustomBrand) {
+        return CustomBrandText ? (
+            <div className='signup-body-custom-branding-markdown'>
+                <Markdown
+                    message={CustomBrandText}
+                    options={{mentionHighlight: false}}
+                />
+            </div>
+        ) : null;
+    }
+
+    return (
+        <p className='signup-body-message-subtitle'>
+            {formatMessage({
+                id: 'signup_user_completed.subtitle',
+                defaultMessage: 'Create your Mattermost account to start collaborating with your team',
+            })}
+        </p>
+    );
+};
+
+const handleEmailOnChange = ({target: {value: email}}: React.ChangeEvent<HTMLInputElement>) => {
+    setEmail(email);
+    dismissAlert();
+
+    if (emailError) {
+        setEmailError('');
+    }
+};
+
+const handleNameOnChange = ({target: {value: name}}: React.ChangeEvent<HTMLInputElement>) => {
+    setName(name);
+    dismissAlert();
+
+    if (nameError) {
+        setNameError('');
+    }
+};
+
+const handlePasswordInputOnChange = ({target: {value: password}}: React.ChangeEvent<HTMLInputElement>) => {
+    setPassword(password);
+    dismissAlert();
+
+    if (passwordError) {
+        setPasswordError('');
+    }
+};
+
+const handleSignupSuccess = async (user: UserProfile, data: UserProfile) => {
+    trackEvent('signup', 'signup_user_02_complete', getRoleFromTrackFlow());
+
+    if (reminderInterval) {
+        trackEvent('signup', `signup_from_reminder_${reminderInterval}`, {user: user.id});
+    }
+
+    const redirectTo = (new URLSearchParams(search)).get('redirect_to');
+
+    const {error} = await dispatch(loginById(data.id, user.password));
+
+    if (error) {
+        if (error.server_error_id === 'api.user.login.not_verified.app_error') {
+            let verifyUrl = '/should_verify_email?email=' + encodeURIComponent(user.email);
+
+            if (teamName) {
+                verifyUrl += '&teamname=' + encodeURIComponent(teamName);
             }
+
+            if (redirectTo) {
+                verifyUrl += '&redirect_to=' + redirectTo;
+            }
+
+            history.push(verifyUrl);
+        } else {
+            setServerError(error.message);
+            setIsWaiting(false);
         }
 
-        if (redirectTo) {
-            history.push(redirectTo);
-        } else if (onboardingFlowEnabled) {
-            // need info about whether admin or not,
-            // and whether admin has already completed
-            // first tiem onboarding. Instead of fetching and orchestrating that here,
-            // let the default root component handle it.
-            history.push('/');
-        } else {
+        return;
+    }
+
+    await postSignupSuccess();
+};
+
+const postSignupSuccess = async () => {
+    const redirectTo = (new URLSearchParams(search)).get('redirect_to');
+    const channelId = (new URLSearchParams(search)).get('channel_id');
+
+    const result = await dispatch(loadMe());
+    const userData = result.data;
+
+    if (token) {
+        setGlobalItem(token, JSON.stringify({usedBefore: true}));
+    }
+
+    // 채널 초대 처리
+    if (channelId && userData?.id) {
+        try {
+            await new Promise((resolve) => setTimeout(resolve, 1000)); // 사용자 생성 후 잠시 대기
+            const result = await dispatch(addChannelMember(channelId, userData.id));
+            if (result.error) {
+                console.error('Failed to add user to channel:', result.error);
+            }
+        } catch (err) {
+            console.error('Error adding user to channel:', err);
+        }
+    } else {
+        console.log('Channel invite skipped:', { channelId, hasUserId: Boolean(userData?.id) });
             redirectUserToDefaultTeam();
         }
     };
