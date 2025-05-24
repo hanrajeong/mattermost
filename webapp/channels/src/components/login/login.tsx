@@ -582,47 +582,63 @@ const Login = ({onCustomizeHeader}: LoginProps) => {
 
         const submit = async ({loginId, password, token}: SubmitOptions) => {
             setIsWaiting(true);
-                    title: formatMessage({
-                        id: 'login.userNotFound',
-                        defaultMessage: "We couldn't find an account matching your login credentials.",
-                    }),
-                });
-                setHasError(true);
-            } else if (loginError.server_error_id === 'api.user.check_user_password.invalid.app_error' ||
-                loginError.server_error_id === 'ent.ldap.do_login.invalid_password.app_error') {
+            try {
+                const {error: loginError} = await dispatch(login(loginId, password, token));
+                if (!loginError) {
+                    // 로그인 성공
+                    const {data: team} = await dispatch(loadMe());
+                    finishSignin(team);
+                    return;
+                }
+
+                // 로그인 실패 처리
                 setShowMfa(false);
                 setIsWaiting(false);
+                setHasError(true);
+
+                if (loginError.server_error_id === 'api.user.login.not_verified.app_error') {
+                    setAlertBanner({
+                        mode: 'danger',
+                        title: formatMessage({
+                            id: 'login.userNotFound',
+                            defaultMessage: "We couldn't find an account matching your login credentials.",
+                        }),
+                    });
+                } else if (loginError.server_error_id === 'api.user.check_user_password.invalid.app_error' ||
+                    loginError.server_error_id === 'ent.ldap.do_login.invalid_password.app_error') {
+                    setAlertBanner({
+                        mode: 'danger',
+                        title: formatMessage({
+                            id: 'login.invalidPassword',
+                            defaultMessage: 'Your password is incorrect.',
+                        }),
+                    });
+                } else if (loginError.server_error_id === 'api.user.login.mfa_required.app_error' && token == null) {
+                    setShowMfa(true);
+                    setIsWaiting(false);
+                    return;
+                } else {
+                    setAlertBanner({
+                        mode: 'danger',
+                        title: formatMessage({
+                            id: 'login.systemError',
+                            defaultMessage: 'An error occurred. Please try again.',
+                        }),
+                    });
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                setShowMfa(false);
+                setIsWaiting(false);
+                setHasError(true);
                 setAlertBanner({
                     mode: 'danger',
                     title: formatMessage({
-                        id: 'login.invalidPassword',
-                        defaultMessage: 'Your password is incorrect.',
+                        id: 'login.systemError',
+                        defaultMessage: 'An error occurred. Please try again.',
                     }),
                 });
-                setHasError(true);
-            } else if (!showMfa && loginError.server_error_id === 'mfa.validate_token.authenticate.app_error') {
-                setShowMfa(true);
-            } else if (loginError.server_error_id === 'api.user.login.invalid_credentials_email_username') {
-                setShowMfa(false);
-                setIsWaiting(false);
-                setAlertBanner({
-                    mode: 'danger',
-                    title: formatMessage({
-                        id: 'login.invalidCredentials',
-                        defaultMessage: 'The email/username or password is invalid.',
-                    }),
-                });
-                setHasError(true);
-            } else {
-                setShowMfa(false);
-                setIsWaiting(false);
-                setAlertBanner({
-                    mode: 'danger',
-                    title: loginError.message,
-                });
-                setHasError(true);
             }
-            return;
         }
 
         await postSubmit();

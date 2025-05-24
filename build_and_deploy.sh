@@ -72,15 +72,21 @@ else
     fi
     echo "Using existing build files from dist directory"
 fi
-# client 디렉토리 생성 (없는 경우)
+echo "Creating client directory..."
+rm -rf client
 mkdir -p client
-# 기존 파일 백업 (옵션)
-if [ -d "client" ] && [ "$(ls -A client)" ]; then
-    mv client client_backup_$(date +%Y%m%d_%H%M%S)
-fi
-# dist 파일들과 root.html을 client 디렉토리로 직접 복사
-cp -rv webapp/channels/dist/* client/
-cp -v webapp/channels/src/root.html client/
+
+echo "Copying dist files to client directory..."
+cp -rv webapp/channels/dist/* client/ || {
+    echo "Error copying dist files"
+    exit 1
+}
+
+echo "Copying root.html to client directory..."
+cp -v webapp/channels/src/root.html client/ || {
+    echo "Error copying root.html"
+    exit 1
+}
 
 echo "Starting Mattermost server..."
 cd $MATTERMOST_ROOT

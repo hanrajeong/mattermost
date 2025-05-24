@@ -522,89 +522,259 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
     const isUserValid = () => {
         let isValid = true;
 
-        const providedEmail = emailInput.current?.value.trim();
-        const telemetryEvents: TelemetryErrorList = {errors: [], success: true};
+useEffect(() => {
+    if (onCustomizeHeader) {
+        onCustomizeHeader({
+            onBackButtonClick: handleHeaderBackButtonOnClick,
+            alternateLink: isMobileView ? getAlternateLink() : undefined,
+        });
+    }
+}, [onCustomizeHeader, handleHeaderBackButtonOnClick, isMobileView, getAlternateLink, search]);
 
-        if (!providedEmail) {
-            setEmailError(formatMessage({id: 'signup_user_completed.required', defaultMessage: 'This field is required'}));
-            telemetryEvents.errors.push({field: 'employeeId', rule: 'not_provided'});
-            isValid = false;
+useEffect(() => {
+    if (submitClicked) {
+        if (emailError && emailInput.current) {
+            emailInput.current.focus();
+        } else if (nameError && nameInput.current) {
+            nameInput.current.focus();
+        } else if (passwordError && passwordInput.current) {
+            passwordInput.current.focus();
         }
+        setSubmitClicked(false);
+    }
+}, [emailError, nameError, passwordError, submitClicked]);
 
-        const providedUsername = nameInput.current?.value.trim().toLowerCase();
+if (loading) {
+    return (<LoadingScreen/>);
+}
 
-        if (providedUsername) {
-            const usernameError = isValidUsername(providedUsername);
+const handleBrandImageError = () => {
+    setBrandImageError(true);
+};
 
-            if (usernameError) {
-                let nameError = '';
-                if (usernameError.id === ValidationErrors.RESERVED_NAME) {
-                    nameError = formatMessage({id: 'signup_user_completed.reserved', defaultMessage: 'This username is reserved, please choose a new one.'});
-                } else {
-                    nameError = formatMessage(
-                        {
-                            id: 'signup_user_completed.usernameLength',
-                            defaultMessage: 'Usernames have to begin with a lowercase letter and be {min}-{max} characters long. You can use lowercase letters, numbers, periods, dashes, and underscores.',
-                        },
-                        {
-                            min: Constants.MIN_USERNAME_LENGTH,
-                            max: Constants.MAX_USERNAME_LENGTH,
-                        },
-                    );
-                }
-                telemetryEvents.errors.push({field: 'username', rule: usernameError.id.toLowerCase()});
-                setNameError(nameError);
-                isValid = false;
+const getCardTitle = () => {
+    if (CustomDescriptionText) {
+        return CustomDescriptionText;
+    }
+
+    if (!enableSignUpWithEmail && enableExternalSignup) {
+        return formatMessage({id: 'signup_user_completed.cardtitle.external', defaultMessage: 'Create your account with one of the following:'});
+    }
+
+    return formatMessage({id: 'signup_user_completed.cardtitle', defaultMessage: 'Create your account'});
+};
+
+const getMessageSubtitle = () => {
+    if (enableCustomBrand) {
+        return CustomBrandText ? (
+            <div className='signup-body-custom-branding-markdown'>
+                <Markdown
+                    message={CustomBrandText}
+                    options={{mentionHighlight: false}}
+                />
+            </div>
+        ) : null;
+    }
+
+    return (
+        <p className='signup-body-message-subtitle'>
+            {formatMessage({
+                id: 'signup_user_completed.subtitle',
+                defaultMessage: 'Create your Mattermost account to start collaborating with your team',
+            })}
+        </p>
+    );
+};
+
+const handleEmailOnChange = ({target: {value: email}}: React.ChangeEvent<HTMLInputElement>) => {
+    setEmail(email);
+    dismissAlert();
+
+    if (emailError) {
+        setEmailError('');
+    }
+};
+
+const handleNameOnChange = ({target: {value: name}}: React.ChangeEvent<HTMLInputElement>) => {
+    setName(name);
+    dismissAlert();
+
+    if (nameError) {
+        setNameError('');
+    }
+};
+
+const handlePasswordInputOnChange = ({target: {value: password}}: React.ChangeEvent<HTMLInputElement>) => {
+    setPassword(password);
+    dismissAlert();
+
+    if (passwordError) {
+        setPasswordError('');
+    }
+};
+
+const handleSignupSuccess = async (user: UserProfile, data: UserProfile) => {
+    trackEvent('signup', 'signup_user_02_complete', getRoleFromTrackFlow());
+
+    if (reminderInterval) {
+        trackEvent('signup', `signup_from_reminder_${reminderInterval}`, {user: user.id});
+    }
+
+    const redirectTo = (new URLSearchParams(search)).get('redirect_to');
+
+    const {error} = await dispatch(loginById(data.id, user.password));
+
+    if (error) {
+        if (error.server_error_id === 'api.user.login.not_verified.app_error') {
+            let verifyUrl = '/should_verify_email?email=' + encodeURIComponent(user.email);
+
+            if (teamName) {
+                verifyUrl += '&teamname=' + encodeURIComponent(teamName);
             }
+
+            if (redirectTo) {
+                verifyUrl += '&redirect_to=' + redirectTo;
+            }
+
+            history.push(verifyUrl);
         } else {
-            setNameError(formatMessage({id: 'signup_user_completed.required', defaultMessage: 'This field is required'}));
-            telemetryEvents.errors.push({field: 'username', rule: 'not_provided'});
-            isValid = false;
+            setServerError(error.message);
+            setIsWaiting(false);
         }
 
-        const providedPassword = passwordInput.current?.value ?? '';
-        const {error, telemetryErrorIds} = isValidPassword(providedPassword, passwordConfig, intl);
+        return;
+    }
+
+    await postSignupSuccess();
+};
+
+const postSignupSuccess = async () => {
+    const redirectTo = (new URLSearchParams(search)).get('redirect_to');
+
+    await dispatch(loadMe());
+
+    if (token) {
+        setGlobalItem(token, JSON.stringify({usedBefore: true}));
+    }
+
+    if (redirectTo) {
+        history.push(redirectTo);
+    } else if (onboardingFlowEnabled) {
+        // need info about whether admin or not,
+        // and whether admin has already completed
+        // first tiem onboarding. Instead of fetching and orchestrating that here,
+        // let the default root component handle it.
+        history.push('/');
+    } else {
+        redirectUserToDefaultTeam();
+    }
+};
+
+function sendSignUpTelemetryEvents(telemetryId: string, props?: any) {
+    trackEvent('signup', telemetryId, props);
+}
+
+type TelemetryErrorList = {errors: Array<{field: string; rule: string}>; success: boolean};
+
+const isUserValid = () => {
+    let isValid = true;
+
+    const providedEmail = emailInput.current?.value.trim();
+    const telemetryEvents: TelemetryErrorList = {errors: [], success: true};
+
+    if (!providedEmail) {
+        setEmailError(formatMessage({id: 'signup_user_completed.required', defaultMessage: 'This field is required'}));
+        telemetryEvents.errors.push({field: 'employeeId', rule: 'not_provided'});
+        isValid = false;
+    } else if (!/^\d+$/.test(providedEmail)) {
+        setEmailError(formatMessage({id: 'signup_user_completed.employeeId', defaultMessage: '사번은 숫자만 입력 가능합니다'}));
+        telemetryEvents.errors.push({field: 'employeeId', rule: 'invalid_format'});
+        isValid = false;
+    }
+
+    const providedUsername = nameInput.current?.value.trim().toLowerCase();
+
+    if (providedUsername) {
+        const usernameError = isValidUsername(providedUsername);
+
+        if (usernameError) {
+            let nameError = '';
+            if (usernameError.id === ValidationErrors.RESERVED_NAME) {
+                nameError = formatMessage({id: 'signup_user_completed.reserved', defaultMessage: 'This username is reserved, please choose a new one.'});
+            } else {
+                nameError = formatMessage(
+                    {
+                        id: 'signup_user_completed.usernameLength',
+                        defaultMessage: 'Usernames have to begin with a lowercase letter and be {min}-{max} characters long. You can use lowercase letters, numbers, periods, dashes, and underscores.',
+                    },
+                    {
+                        min: Constants.MIN_USERNAME_LENGTH,
+                        max: Constants.MAX_USERNAME_LENGTH,
+                    },
+                );
+            }
+            telemetryEvents.errors.push({field: 'username', rule: usernameError.id.toLowerCase()});
+            setNameError(nameError);
+            isValid = false;
+        }
+    } else {
+        setNameError(formatMessage({id: 'signup_user_completed.required', defaultMessage: 'This field is required'}));
+        telemetryEvents.errors.push({field: 'username', rule: 'not_provided'});
+        isValid = false;
+    }
+
+    const providedPassword = passwordInput.current?.value ?? '';
+    const {error, telemetryErrorIds} = isValidPassword(providedPassword, passwordConfig, intl);
+
+    if (error) {
+        setPasswordError(error as string);
+        telemetryEvents.errors = [...telemetryEvents.errors, ...telemetryErrorIds];
+        isValid = false;
+    }
+
+    if (telemetryEvents.errors.length) {
+        telemetryEvents.success = false;
+    }
+
+    sendSignUpTelemetryEvents('validate_user', telemetryEvents);
+
+    return isValid;
+};
+
+const dismissAlert = () => {
+    setAlertBanner(null);
+};
+
+const handleSubmit = async (e: React.MouseEvent | React.KeyboardEvent) => {
+    e.preventDefault();
+    sendSignUpTelemetryEvents('click_create_account', getRoleFromTrackFlow());
+    setIsWaiting(true);
+    setSubmitClicked(true);
+
+    if (isUserValid()) {
+        setNameError('');
+        setEmailError('');
+        setPasswordError('');
+        setServerError('');
+        setIsWaiting(true);
+
+        const employeeId = emailInput.current?.value.trim();
+        const user = {
+            email: `${employeeId}@company.com`,
+            username: employeeId,
+            password: passwordInput.current?.value,
+        } as UserProfile;
+
+        const redirectTo = (new URLSearchParams(search)).get('redirect_to') as string;
+
+        const {data, error} = await dispatch(createUser(user, token, inviteId, redirectTo));
 
         if (error) {
-            setPasswordError(error as string);
-            telemetryEvents.errors = [...telemetryEvents.errors, ...telemetryErrorIds];
-            isValid = false;
-        }
-
-        if (telemetryEvents.errors.length) {
-            telemetryEvents.success = false;
-        }
-
-        sendSignUpTelemetryEvents('validate_user', telemetryEvents);
-
-        return isValid;
-    };
-
-    const dismissAlert = () => {
-        setAlertBanner(null);
-    };
-
-    const handleSubmit = async (e: React.MouseEvent | React.KeyboardEvent) => {
-        e.preventDefault();
-        sendSignUpTelemetryEvents('click_create_account', getRoleFromTrackFlow());
-        setIsWaiting(true);
-        setSubmitClicked(true);
-
-        if (isUserValid()) {
-            setNameError('');
-            setEmailError('');
-            setPasswordError('');
-            setServerError('');
-            setIsWaiting(true);
-
-            const user = {
-                email: emailInput.current?.value.trim().toLowerCase(),
-                username: emailInput.current?.value.trim().toLowerCase(),
-                password: passwordInput.current?.value,
-            } as UserProfile;
-
-            const redirectTo = (new URLSearchParams(search)).get('redirect_to') as string;
-
+            setAlertBanner({
+                mode: 'danger' as ModeType,
+                title: (error as ServerError).message,
+                onDismiss: dismissAlert,
+            });
             const {data, error} = await dispatch(createUser(user, token, inviteId, redirectTo));
 
             if (error) {
