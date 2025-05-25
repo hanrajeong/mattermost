@@ -22,7 +22,7 @@ if [ ! -d "$MATTERMOST_DIR" ]; then
 fi
 
 echo "[📁] Mattermost 파일 복사 중..."
-rsync -av --exclude=".git*" --exclude=".vscode" --exclude="*.log" \
+rsync -a --exclude=".git*" --exclude=".vscode" --exclude="*.log" \
     --exclude="tmp" --exclude="logs" --exclude="*.swp" \
     "$MATTERMOST_DIR/" "$PACKAGE_DIR/mattermost/"
 
