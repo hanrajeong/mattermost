@@ -234,8 +234,25 @@ export function performSearch(terms: string, teamId: string, isMentionSearch?: b
         // timezone offset in seconds
         const userCurrentTimezone = getCurrentTimezone(getState());
         const timezoneOffset = ((userCurrentTimezone && (userCurrentTimezone.length > 0)) ? getUtcOffsetForTimeZone(userCurrentTimezone) : getBrowserUtcOffset()) * 60;
-        const messagesPromise = dispatch(searchPostsWithParams(teamId, {terms: searchTerms, is_or_search: Boolean(isMentionSearch), include_deleted_channels: viewArchivedChannels, time_zone_offset: timezoneOffset, page: 0, per_page: 20}));
-        const filesPromise = dispatch(searchFilesWithParams(teamId, {terms: termsWithExtensionsFilters, is_or_search: Boolean(isMentionSearch), include_deleted_channels: viewArchivedChannels, time_zone_offset: timezoneOffset, page: 0, per_page: 20}));
+        
+        // 검색 파라미터 설정
+        const messagesPromise = dispatch(searchPostsWithParams(teamId, {
+            terms: searchTerms, 
+            is_or_search: Boolean(isMentionSearch), 
+            include_deleted_channels: viewArchivedChannels, // 사용자 설정에 따라 삭제된 채널 포함 여부 결정
+            time_zone_offset: timezoneOffset, 
+            page: 0, 
+            per_page: 50 // 검색 결과 수 증가
+        }));
+        
+        const filesPromise = dispatch(searchFilesWithParams(teamId, {
+            terms: termsWithExtensionsFilters, 
+            is_or_search: Boolean(isMentionSearch), 
+            include_deleted_channels: viewArchivedChannels, // 사용자 설정에 따라 삭제된 채널 포함 여부 결정
+            time_zone_offset: timezoneOffset, 
+            page: 0, 
+            per_page: 50 // 검색 결과 수 증가
+        }));
         return Promise.all([filesPromise, messagesPromise]);
     };
 }

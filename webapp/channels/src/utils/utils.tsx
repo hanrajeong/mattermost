@@ -1096,7 +1096,8 @@ export function imageURLForUser(userId: UserProfile['id'], lastPictureUpdate = 0
     img.onerror = () => {
         // 이미지 로드 실패 시 캐시에 기록
         errorImageUrls[cacheKey] = true;
-        console.warn(`Failed to load image for user ${userId}`);
+        // 콘솔 경고 메시지 제거
+        // console.warn(`Failed to load image for user ${userId}`);
     };
     img.src = imageUrl;
     

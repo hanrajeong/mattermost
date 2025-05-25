@@ -35,17 +35,23 @@ export function addUserIdsForStatusFetchingPoll(userIdsForStatus: Array<UserProf
 
         loaders.pollingStatusLoader.queue(userIdsForStatus);
 
-        const pollingInterval = getUsersStatusAndProfileFetchingPollInterval(getState());
+        // 기본 폴링 간격 가져오기
+        let pollingInterval = getUsersStatusAndProfileFetchingPollInterval(getState());
+        
+        // 폴링 간격이 너무 길면 기본값으로 10초 설정 (기존 값이 너무 길 수 있음)
+        if (pollingInterval > 10000) {
+            pollingInterval = 10000; // 10초로 제한
+        }
 
-        // Escape hatch to fetch immediately or when we haven't received the polling interval from config yet
-        if (!pollingInterval || pollingInterval <= 0) {
-            loaders.pollingStatusLoader.fetchBatchNow();
-        } else {
-            // Start the interval if it is not already running
+        // 즉시 상태 가져오기
+        loaders.pollingStatusLoader.fetchBatchNow();
+        
+        // 폴링 간격 설정 및 시작
+        if (pollingInterval && pollingInterval > 0) {
+            // 더 짧은 간격으로 폴링 시작
             loaders.pollingStatusLoader.startIntervalIfNeeded(pollingInterval);
         }
 
-        // Now here the interval is already running and we have added the user ids to the poll so we don't need to do anything
         return {data: true};
     };
 }

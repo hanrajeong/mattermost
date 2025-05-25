@@ -90,7 +90,15 @@ const ProductMenuList = (props: Props): JSX.Element | null => {
     const isAdmin = useSelector(isCurrentUserSystemAdmin);
 
     useEffect(() => {
-        props.actions.getPrevTrialLicense();
+        // Enterprise 기능에 대한 접근 권한이 없을 수 있으므로 오류 처리 추가
+        try {
+            // 이 호출이 실패해도 애플리케이션이 계속 작동하도록 오류를 무시합니다
+            props.actions.getPrevTrialLicense().catch(() => {
+                // 오류 무시 - 403 오류는 예상되는 동작이므로 콘솔에 로그하지 않음
+            });
+        } catch (error) {
+            // 예상치 못한 오류 처리
+        }
     }, []);
 
     if (!currentUser) {

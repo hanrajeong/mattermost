@@ -1324,9 +1324,32 @@ function addedNewGmUser(preference) {
 }
 
 export function handleStatusChangedEvent(msg) {
-    return {
-        type: UserTypes.RECEIVED_STATUSES,
-        data: {[msg.data.user_id]: msg.data.status},
+    return (doDispatch, doGetState) => {
+        // 상태 변경 이벤트를 받으면 즉시 Redux 스토어 업데이트
+        doDispatch({
+            type: UserTypes.RECEIVED_STATUSES,
+            data: {[msg.data.user_id]: msg.data.status},
+        });
+
+        // 현재 사용자가 속한 채널의 사용자 상태를 업데이트하기 위해 추가 조치
+        const state = doGetState();
+        const currentChannelId = getCurrentChannelId(state);
+        
+        if (currentChannelId) {
+            const channelMembers = getChannelMembersInChannels(state)[currentChannelId];
+            
+            // 현재 채널에 상태가 변경된 사용자가 있는지 확인
+            if (channelMembers && channelMembers[msg.data.user_id]) {
+                // 사용자 프로필 정보도 함께 업데이트하여 UI에 즉시 반영되도록 함
+                const userIds = [msg.data.user_id];
+                doDispatch(loadUser(msg.data.user_id));
+                
+                // 커스텀 이모지 상태가 있는 경우 함께 로드
+                doDispatch(loadCustomEmojisForCustomStatusesByUserIds(userIds));
+            }
+        }
+        
+        return {data: true};
     };
 }
 

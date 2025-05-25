@@ -3,19 +3,20 @@
 
 import {batchActions} from 'redux-batched-actions';
 
-import type {FileSearchResults, FileSearchResultItem} from '@mattermost/types/files';
-import type {PostList, PostSearchResults} from '@mattermost/types/posts';
-import type {SearchParameter} from '@mattermost/types/search';
+import type {FileSearchResultItem} from '@mattermost/types/files';
+import type {Post} from '@mattermost/types/posts';
+import type {SearchParameter, SearchTypes as SearchTypesInterface} from '@mattermost/types/search';
 
 import {SearchTypes} from 'mattermost-redux/action_types';
+import {logError} from 'mattermost-redux/actions/errors';
+import {getMissingChannelsFromPosts} from 'mattermost-redux/actions/channels';
+import {getMentionsAndStatusesForPosts} from 'mattermost-redux/actions/posts';
 import {Client4} from 'mattermost-redux/client';
-import {getCurrentUserId} from 'mattermost-redux/selectors/entities/users';
-import type {ActionResult, ActionFuncAsync, ThunkActionFunc} from 'mattermost-redux/types/actions';
-
-import {getChannelAndMyMember, getChannelMembers} from './channels';
-import {logError} from './errors';
-import {receivedFiles} from './files';
-import {forceLogoutIfNecessary} from './helpers';
+import {forceLogoutIfNecessary} from 'mattermost-redux/actions/helpers';
+import {receivedPosts} from 'mattermost-redux/actions/posts';
+import {getPostsFromArray} from 'mattermost-redux/selectors/entities/posts';
+import {getCurrentTeamId} from 'mattermost-redux/selectors/entities/teams';
+import type {ActionFuncAsync} from 'mattermost-redux/types/actions';
 import {getMentionsAndStatusesForPosts, receivedPosts} from './posts';
 
 export const WEBAPP_SEARCH_PER_PAGE = 20;
@@ -76,7 +77,16 @@ export function searchPostsWithParams(teamId: string, params: SearchParameter): 
         let posts;
 
         try {
-            posts = await Client4.searchPostsWithParams(teamId, params);
+            // 사용자가 속한 모든 채널에서 검색하도록 설정
+            const modifiedParams = {
+                ...params,
+                include_deleted_channels: true, // 삭제된 채널 포함
+            };
+            
+            // 팀 ID가 없으면 현재 팀 ID 사용
+            const currentTeamId = teamId || getCurrentTeamId(getState());
+            
+            posts = await Client4.searchPostsWithParams(currentTeamId, modifiedParams);
 
             const profilesAndStatuses = getMentionsAndStatusesForPosts(posts.posts, dispatch, getState);
             const missingChannels = dispatch(getMissingChannelsFromPosts(posts.posts));

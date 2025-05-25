@@ -31,9 +31,10 @@ export function addVisibleUsersInCurrentChannelAndSelfToStatusPoll(): ActionFunc
 
         const userIdsToFetchStatusFor = new Set<string>();
 
-        // We fetch for users who have recently posted in the current channel
+        // 현재 채널에서 최근에 게시한 사용자들의 상태 가져오기
         if (postsInChannel && numberOfPostsVisibleInCurrentChannel > 0) {
-            const posts = postsInChannel.slice(0, numberOfPostsVisibleInCurrentChannel);
+            // 더 많은 게시물을 포함하도록 개선 (100개까지)
+            const posts = postsInChannel.slice(0, Math.max(numberOfPostsVisibleInCurrentChannel, 100));
             for (const post of posts) {
                 if (post.user_id && post.user_id !== currentUserId) {
                     userIdsToFetchStatusFor.add(post.user_id);
@@ -41,22 +42,26 @@ export function addVisibleUsersInCurrentChannelAndSelfToStatusPoll(): ActionFunc
             }
         }
 
-        // We also fetch for users who have DMs open with the current user
+        // DM 채널의 사용자들 상태 가져오기
         const directShowPreferences = getDirectShowPreferences(state);
         for (const directShowPreference of directShowPreferences) {
             if (directShowPreference.value === 'true') {
-                // This is the other user's id in the DM
+                // DM의 상대방 사용자 ID
                 userIdsToFetchStatusFor.add(directShowPreference.name);
             }
         }
 
-        // Add current user to the list to fetch status for
+        // 현재 사용자도 상태 가져오기 목록에 추가
         userIdsToFetchStatusFor.add(currentUserId);
 
-        // Both the users in the DM list and recent posts constitute for all the visible users in the current channel
+        // 모든 사용자 ID를 배열로 변환
         const userIdsForStatus = Array.from(userIdsToFetchStatusFor);
         if (userIdsForStatus.length > 0) {
+            // 상태 업데이트를 위해 폴링 시작
             dispatch(addUserIdsForStatusFetchingPoll(userIdsForStatus));
+            
+            // 즉시 상태 가져오기 (폴링과 별도로 즉시 업데이트)
+            dispatch(getStatusesByIds(userIdsForStatus));
         }
 
         return {data: true};
