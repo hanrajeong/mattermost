@@ -3,21 +3,21 @@
 
 import {batchActions} from 'redux-batched-actions';
 
-import type {FileSearchResultItem} from '@mattermost/types/files';
-import type {Post} from '@mattermost/types/posts';
+import type {FileSearchResultItem, FileSearchResults} from '@mattermost/types/files';
+import type {Post, PostList, PostSearchResults} from '@mattermost/types/posts';
 import type {SearchParameter, SearchTypes as SearchTypesInterface} from '@mattermost/types/search';
 
 import {SearchTypes} from 'mattermost-redux/action_types';
+import {FileTypes} from 'mattermost-redux/action_types';
 import {logError} from 'mattermost-redux/actions/errors';
-import {getMissingChannelsFromPosts} from 'mattermost-redux/actions/channels';
-import {getMentionsAndStatusesForPosts} from 'mattermost-redux/actions/posts';
+import {getChannelAndMyMember, getChannelMembers} from 'mattermost-redux/actions/channels';
+import {getMentionsAndStatusesForPosts, receivedPosts} from 'mattermost-redux/actions/posts';
+import {receivedFiles} from 'mattermost-redux/actions/files';
 import {Client4} from 'mattermost-redux/client';
 import {forceLogoutIfNecessary} from 'mattermost-redux/actions/helpers';
-import {receivedPosts} from 'mattermost-redux/actions/posts';
-import {getPostsFromArray} from 'mattermost-redux/selectors/entities/posts';
+import {getCurrentUserId} from 'mattermost-redux/selectors/entities/users';
 import {getCurrentTeamId} from 'mattermost-redux/selectors/entities/teams';
-import type {ActionFuncAsync} from 'mattermost-redux/types/actions';
-import {getMentionsAndStatusesForPosts, receivedPosts} from './posts';
+import type {ActionFuncAsync, ActionResult, ThunkActionFunc} from 'mattermost-redux/types/actions';
 
 export const WEBAPP_SEARCH_PER_PAGE = 20;
 
