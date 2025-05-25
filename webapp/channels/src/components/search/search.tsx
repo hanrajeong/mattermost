@@ -3,7 +3,7 @@
 
 import React, {useEffect, useState, useRef, useCallback} from 'react';
 import type {ChangeEvent, FormEvent} from 'react';
-import {useIntl} from 'react-intl';
+import {useIntl, FormattedMessage} from 'react-intl';
 import {useSelector} from 'react-redux';
 import debounce from 'lodash/debounce';
 import {trackEvent} from 'actions/telemetry_actions';
@@ -38,45 +38,22 @@ interface SearchHintOption {
     };
 }
 
+// 검색 필터 옵션을 항상 표시하도록 수정된 함수
 const determineVisibleSearchHintOptions = (searchTerms: string, searchType: SearchType): SearchHintOption[] => {
-    let newVisibleSearchHintOptions: SearchHintOption[] = [];
+    // 검색 타입에 따라 적절한 옵션 선택
     let options = searchHintOptions;
     if (searchType === 'files') {
         options = searchFilesHintOptions;
     }
-
+    
+    // 검색어가 비어있으면 모든 옵션 표시
     if (searchTerms.trim() === '') {
         return options;
     }
-
-    const pretextArray = searchTerms.split(/\s+/g);
-    const pretext = pretextArray[pretextArray.length - 1];
-    const penultimatePretext = pretextArray[pretextArray.length - 2];
-
-    let shouldShowHintOptions: boolean;
-
-    if (penultimatePretext) {
-        shouldShowHintOptions = !(options.some(({searchTerm}) => penultimatePretext.toLowerCase().endsWith(searchTerm.toLowerCase())) && penultimatePretext !== '@');
-    } else {
-        shouldShowHintOptions = !options.some(({searchTerm}) => searchTerms.toLowerCase().endsWith(searchTerm.toLowerCase())) || searchTerms === '@';
-    }
-
-    if (shouldShowHintOptions) {
-        try {
-            newVisibleSearchHintOptions = options.filter((option) => {
-                if (pretext === '@' && option.searchTerm === 'From:') {
-                    return true;
-                }
-
-                return new RegExp(pretext, 'ig').
-                    test(option.searchTerm) && option.searchTerm.toLowerCase() !== pretext.toLowerCase();
-            });
-        } catch {
-            newVisibleSearchHintOptions = [];
-        }
-    }
-
-    return newVisibleSearchHintOptions;
+    
+    // 검색어에 상관없이 항상 모든 필터 옵션 표시
+    // 이전 구현에서는 검색어에 따라 필터 옵션이 사라졌지만 이제는 항상 표시됨
+    return options;
 };
 
 const Search = ({
@@ -180,11 +157,11 @@ const Search = ({
         }
     }, [isMobileView, isSideBarRight]);
 
-    useEffect((): void => {
-        if (!isMobileView) {
-            setVisibleSearchHintOptions(determineVisibleSearchHintOptions(searchTerms, searchType));
-        }
-    }, [isMobileView, searchTerms, searchType]);
+    useEffect(() => {
+        // 항상 모든 필터 옵션을 표시하도록 변경
+        const options = searchType === 'files' ? searchFilesHintOptions : searchHintOptions;
+        setVisibleSearchHintOptions(options);
+    }, [searchType]);
 
     useEffect((): void => {
         if (!isMobileView && focused && keepInputFocused) {
@@ -242,11 +219,19 @@ const Search = ({
         }
     };
 
+    // 검색어에 새 필터 추가 함수 - 여러 필터를 동시에 적용할 수 있도록 수정
     const handleAddSearchTerm = (term: string): void => {
-        const pretextArray = searchTerms?.split(' ') || [];
-        pretextArray.pop();
-        pretextArray.push(term.toLowerCase());
-        handleUpdateSearchTerms(pretextArray.join(' '));
+        const pretextArray = searchTerms.split(/\s+/g);
+        const pretext = pretextArray[pretextArray.length - 1];
+        const prefix = (pretext.startsWith('@') && term === 'From:') ? '' : ' ';
+        
+        // 검색어에 새 필터 추가
+        const newSearchTerms = searchTerms + prefix + term + ' ';
+        updateSearchTerms(newSearchTerms);
+        
+        // 검색창에 포커스 유지
+        setFocused(true);
+        setKeepInputFocused(true);
     };
 
     const handleUpdateSearchTeamFromResult = async (teamId: string) => {
@@ -278,7 +263,7 @@ const Search = ({
         setFocused(true);
     };
 
-    // 검색 실행 함수
+    // 검색 실행 함수 - 검색 버튼 클릭이나 엔터 키 입력 시 호출됨
     const handleSearch = async (): Promise<void> => {
         if (!searchTerms) {
             return;
@@ -286,6 +271,8 @@ const Search = ({
 
         trackEvent('ui', 'ui_rhs_search');
 
+        // 검색 결과를 표시하고 RHS를 열어줌
+        openRHSSearch();
         const teamId = searchTeam || currentChannel?.team_id;
         await showSearchResults(isMentionSearch);
         updateSearchTeam(teamId);
@@ -295,13 +282,15 @@ const Search = ({
     const debouncedSearch = useCallback(
         debounce((term: string) => {
             if (term.trim().length > 0) {
+                // 검색 결과를 표시하고 RHS를 열어줌
+                openRHSSearch();
                 showSearchResults(isMentionSearch);
                 const teamId = searchTeam || currentChannel?.team_id;
                 updateSearchTeam(teamId);
                 trackEvent('ui', 'ui_rhs_search');
             }
-        }, 500),
-        [showSearchResults, isMentionSearch, searchTeam, currentChannel, updateSearchTeam]
+        }, 300), // 디바운스 시간을 300ms로 줄여 더 빠르게 반응하도록 함
+        [openRHSSearch, showSearchResults, isMentionSearch, searchTeam, currentChannel, updateSearchTeam]
     );
 
     const handleChange = (e: ChangeEvent<HTMLInputElement>): void => {
@@ -310,11 +299,15 @@ const Search = ({
 
         // 검색어가 있을 경우 디바운스된 검색 실행
         if (term.trim().length > 0) {
-            debouncedSearch(term);
-            // RHS를 열어서 검색 결과가 보이도록 함
+            // 즉시 RHS를 열어서 검색 UI가 보이도록 함
             if (!searchVisible) {
                 openRHSSearch();
             }
+            // 디바운스된 검색 실행
+            debouncedSearch(term);
+        } else if (term.trim().length === 0 && searchVisible) {
+            // 검색어가 비어있고 검색 화면이 열려 있으면 검색 결과 초기화
+            closeRightHandSide();
         }
     };
 
@@ -447,34 +440,63 @@ const Search = ({
         openRHSSearch();
     };
 
-    const renderHintPopover = (): JSX.Element => {
-        let termsUsed = 0;
+    // 검색 필터 초기화 함수
+    const handleClearFilters = (): void => {
+        // 검색어에서 모든 필터 제거
+        const cleanedTerms = searchTerms.replace(/\b(From:|In:|On:|Before:|After:|Ext:)\s*\S+\s*/gi, '');
+        updateSearchTerms(cleanedTerms.trim());
+        // 검색 실행
+        if (cleanedTerms.trim().length > 0) {
+            debouncedSearch(cleanedTerms.trim());
+        }
+    };
 
-        searchTerms?.split(/[: ]/g).forEach((word: string): void => {
-            let options = searchHintOptions;
-            if (searchType === 'files') {
-                options = searchFilesHintOptions;
-            }
-            if (options.some(({searchTerm}) => searchTerm.toLowerCase() === word.toLowerCase())) {
-                termsUsed++;
-            }
-        });
+    // 검색 힌트 팝오버 렌더링 함수 - 항상 표시되도록 수정
+    const renderHintPopover = (): JSX.Element => {
+        // 사용된 필터 개수 계산
+        let filtersUsed = 0;
+        const filterRegex = /(From:|In:|On:|Before:|After:|Ext:)\s*\S+/gi;
+        const matches = searchTerms.match(filterRegex) || [];
+        filtersUsed = matches.length;
 
         if (visibleSearchHintOptions.length === 0 || isMentionSearch) {
             return <></>;
         }
 
-        const helpClass = `search-help-popover${((dropdownFocused || focused) && termsUsed <= 2) ? ' visible' : ''}`;
+        // 항상 표시되도록 helpClass 수정
+        const helpClass = 'search-help-popover visible';
 
         return (
             <Popover
                 id={`${isSideBarRight ? 'sbr-' : ''}searchbar-help-popup`}
-                placement='bottom'
+                placement='right-start' // 위치를 오른쪽으로 변경
                 className={helpClass}
+                style={{marginLeft: '10px'}} // 왼쪽 여백 추가
             >
+                <div className="search-filters-header" style={{display: 'flex', justifyContent: 'space-between', padding: '8px 16px', borderBottom: '1px solid rgba(0, 0, 0, 0.1)'}}>
+                    <h4 className="search-filters-title" style={{margin: 0, fontSize: '14px', fontWeight: 600}}>
+                        <FormattedMessage
+                            id="search_bar.filters.title"
+                            defaultMessage="Filter your search"
+                        />
+                    </h4>
+                    {filtersUsed > 0 && (
+                        <button 
+                            className="search-filters-clear-button" 
+                            onClick={handleClearFilters}
+                            aria-label="Clear all filters"
+                            style={{background: 'none', border: 'none', color: 'var(--button-bg)', cursor: 'pointer', fontSize: '13px', padding: '0 8px'}}
+                        >
+                            <FormattedMessage
+                                id="search_bar.filters.clear"
+                                defaultMessage="Clear filters"
+                            />
+                        </button>
+                    )}
+                </div>
                 <SearchHint
                     options={visibleSearchHintOptions}
-                    withTitle={true}
+                    withTitle={false} // 제목을 위에서 직접 추가했으므로 false로 설정
                     onOptionSelected={handleAddSearchTerm}
                     onMouseDown={handleSearchHintSelection}
                     highlightedIndex={highlightedSearchHintIndex}
