@@ -52,7 +52,8 @@ function ThreadFooter({
     
     // 댓글 목록 상태 관리
     const [replyPosts, setReplyPosts] = useState<Post[]>([]);
-    const [showReplies, setShowReplies] = useState(false);
+    // 기본적으로 댓글을 표시하도록 설정
+    const [showReplies, setShowReplies] = useState(true);
     
     // 스레드의 댓글 가져오기
     useEffect(() => {
