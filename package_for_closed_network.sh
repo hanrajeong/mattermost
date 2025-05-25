@@ -5,7 +5,8 @@
 
 CURR_DIR=$(pwd)
 PACKAGE_DIR="mattermost_package"
-TARGET_FILE="mattermost_closed_network.tar.gz"
+TARGET_FILE="mattermost_closed_network.tar"
+SPLIT_SIZE="200m"  # 이메일 첨부 제한 (200MB)
 
 echo "Mattermost 폐쇄망 배포 패키지 생성 시작..."
 
@@ -13,7 +14,6 @@ echo "Mattermost 폐쇄망 배포 패키지 생성 시작..."
 mkdir -p $PACKAGE_DIR
 
 # Mattermost 서버 파일 복사 (.git 등 불필요한 파일 제외)
-# node_modules는 폐쇄망에서 빌드/수정이 필요할 경우를 대비해 포함
 echo "Mattermost 서버 파일 복사 중..."
 rsync -av --exclude=".git" --exclude=".gitlab" \
     --exclude=".github" --exclude=".vscode" --exclude="*.log" \
@@ -29,92 +29,36 @@ cp -r ./pgsql $PACKAGE_DIR/
 echo "Go 환경 복사 중..."
 cp -r ./go-1.21.5 $PACKAGE_DIR/
 
+# 데이터베이스 내용(사용자 계정, 메시지 등) 복사
+echo "데이터베이스 내용 복사 중..."
+cp -r ./pgdata $PACKAGE_DIR/
+
 # 데스크톱 앱 복사
 echo "Mattermost 데스크톱 앱 복사 중..."
 cp ./mattermost-desktop-5.10.0-win-x64.msi $PACKAGE_DIR/
 
-# 설치 스크립트 생성
-cat > $PACKAGE_DIR/install.sh << 'EOF'
-#!/bin/bash
-
-# Mattermost 폐쇄망 설치 스크립트
-# 작성일: 2025-05-25
-
-INSTALL_DIR="/root/fshome/sctadm"
-CURR_DIR=$(pwd)
-
-echo "Mattermost 폐쇄망 설치를 시작합니다..."
-
-# 디렉토리 생성
-mkdir -p $INSTALL_DIR
-cd $INSTALL_DIR
-
-# 파일 복사
-echo "파일 복사 중..."
-cp -r $CURR_DIR/mattermost ./
-cp -r $CURR_DIR/postgresql-14.10 ./
-cp -r $CURR_DIR/pgsql ./
-cp -r $CURR_DIR/go-1.21.5 ./
-cp $CURR_DIR/mattermost-desktop-5.10.0-win-x64.msi ./
-
-# 환경 변수 설정
-echo "환경 변수 설정 중..."
-export PATH=$INSTALL_DIR/go-1.21.5/bin:$PATH
-export GOROOT=$INSTALL_DIR/go-1.21.5
-export PATH=$INSTALL_DIR/pgsql/bin:$PATH
-
-# PostgreSQL 데이터 디렉토리 설정
-if [ ! -d "$INSTALL_DIR/pgdata" ]; then
-    echo "PostgreSQL 데이터 디렉토리 초기화 중..."
-    mkdir -p $INSTALL_DIR/pgdata
-    $INSTALL_DIR/pgsql/bin/initdb -D $INSTALL_DIR/pgdata
-    
-    # PostgreSQL 설정 파일 수정
-    echo "PostgreSQL 설정 수정 중..."
-    echo "listen_addresses = '*'" >> $INSTALL_DIR/pgdata/postgresql.conf
-    echo "host all all 0.0.0.0/0 md5" >> $INSTALL_DIR/pgdata/pg_hba.conf
-fi
-
-# PostgreSQL 시작
-echo "PostgreSQL 시작 중..."
-$INSTALL_DIR/pgsql/bin/pg_ctl -D $INSTALL_DIR/pgdata start
-
-# Mattermost 데이터베이스 생성
-echo "Mattermost 데이터베이스 생성 중..."
-$INSTALL_DIR/pgsql/bin/createuser -s mattermost || true
-$INSTALL_DIR/pgsql/bin/createdb -O mattermost mattermost_db || true
-
-# Mattermost 설정 파일 업데이트
-echo "Mattermost 설정 파일 업데이트 중..."
-CONFIG_FILE="$INSTALL_DIR/mattermost/config/config.json"
-
-# 백업 생성
-cp $CONFIG_FILE ${CONFIG_FILE}.bak
-
-# 데이터베이스 설정 업데이트
-sed -i 's/"DriverName": ".*"/"DriverName": "postgres"/g' $CONFIG_FILE
-sed -i 's/"DataSource": ".*"/"DataSource": "postgres:\/\/mattermost:mattermost@localhost:5432\/mattermost_db?sslmode=disable\&connect_timeout=10"/g' $CONFIG_FILE
-
-# 폰트 디렉토리 생성
-echo "폰트 디렉토리 생성 중..."
-mkdir -p $INSTALL_DIR/mattermost/fonts
-
-# Mattermost 서버 시작
-echo "Mattermost 서버 시작 중..."
-cd $INSTALL_DIR/mattermost
-./bin/mattermost &
-
-echo "설치가 완료되었습니다!"
-echo "Mattermost 서버는 http://localhost:8065 에서 접속할 수 있습니다."
-echo "데스크톱 앱은 Windows 환경에서 mattermost-desktop-5.10.0-win-x64.msi 파일을 설치하세요."
-EOF
-
-# 설치 스크립트 실행 권한 부여
+# 기존 설치 및 복원 스크립트 복사
+echo "설치 및 복원 스크립트 복사 중..."
+cp ./install.sh $PACKAGE_DIR/
 chmod +x $PACKAGE_DIR/install.sh
 
-# 패키지 압축
+# 패키지 압축 - 이메일 첨부용 분할 압축 (200MB 단위)
 echo "패키지 압축 중..."
-tar -czf $TARGET_FILE $PACKAGE_DIR
 
-echo "패키징 완료! $TARGET_FILE 파일이 생성되었습니다."
-echo "이 파일을 폐쇄망 환경으로 이동한 후, 압축을 풀고 install.sh 스크립트를 실행하세요."
+# 먼저 단일 파일로 압축
+tar -cf $TARGET_FILE $PACKAGE_DIR
+
+# 분할 압축 실행
+echo "파일을 ${SPLIT_SIZE} 단위로 분할하여 압축하는 중..."
+split -b $SPLIT_SIZE $TARGET_FILE "${TARGET_FILE}.part"
+
+# 원본 tar 파일 삭제
+rm $TARGET_FILE
+
+# 분할된 파일 목록 출력
+echo -e "\n분할 압축 파일 목록:"
+ls -lh ${TARGET_FILE}.part*
+
+echo -e "\n패키징 완료! 파일이 여러 개의 부분으로 분할되어 생성되었습니다."
+echo "이 파일들(${TARGET_FILE}.part*)과 restore_package.sh 스크립트를 함께 폐쇄망 환경으로 이동하세요."
+echo "폐쇄망에서 restore_package.sh를 실행하여 파일을 복원한 후 install.sh를 실행하세요."
