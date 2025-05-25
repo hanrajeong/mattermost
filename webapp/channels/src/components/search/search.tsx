@@ -6,7 +6,7 @@ import type {ChangeEvent, FormEvent} from 'react';
 import {useIntl} from 'react-intl';
 import {useSelector} from 'react-redux';
 import debounce from 'lodash/debounce';
-import {trackEvent} from 'mattermost-redux/actions/telemetry_actions';
+import {trackEvent} from 'actions/telemetry_actions';
 
 import {getCurrentChannelNameForSearchShortcut} from 'mattermost-redux/selectors/entities/channels';
 

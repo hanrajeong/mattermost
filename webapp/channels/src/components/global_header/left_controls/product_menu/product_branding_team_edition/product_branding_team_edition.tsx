@@ -43,7 +43,7 @@ const ProductBrandingTeamEdition = (): JSX.Element => {
                 width={116}
                 height={20}
             />
-            <Badge>{'FREE EDITION'}</Badge>
+            {/* FREE EDITION 배지 제거 */}
         </ProductBrandingTeamEditionContainer>
     );
 };
