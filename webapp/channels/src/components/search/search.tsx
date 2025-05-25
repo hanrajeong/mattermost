@@ -30,6 +30,21 @@ import type {SearchType} from 'types/store/rhs';
 
 import type {Props, SearchFilterType} from './types';
 
+declare namespace JSX {
+    interface IntrinsicElements {
+        div: React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>;
+        span: React.DetailedHTMLProps<React.HTMLAttributes<HTMLSpanElement>, HTMLSpanElement>;
+        h4: React.DetailedHTMLProps<React.HTMLAttributes<HTMLHeadingElement>, HTMLHeadingElement>;
+        button: React.DetailedHTMLProps<React.ButtonHTMLAttributes<HTMLButtonElement>, HTMLButtonElement>;
+        a: React.DetailedHTMLProps<React.AnchorHTMLAttributes<HTMLAnchorElement>, HTMLAnchorElement>;
+        i: React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
+        ul: React.DetailedHTMLProps<React.HTMLAttributes<HTMLUListElement>, HTMLUListElement>;
+        li: React.DetailedHTMLProps<React.LiHTMLAttributes<HTMLLIElement>, HTMLLIElement>;
+        form: React.DetailedHTMLProps<React.FormHTMLAttributes<HTMLFormElement>, HTMLFormElement>;
+        input: React.DetailedHTMLProps<React.InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>;
+    }
+}
+
 interface SearchHintOption {
     searchTerm: string;
     message: {
@@ -89,7 +104,7 @@ const Search = ({
     hideSearchBar,
     isSideBarRight,
     isSideBarRightOpen,
-}: Props): JSX.Element => {
+}: Props): React.ReactElement => {
     const intl = useIntl();
     const currentChannelName = useSelector(getCurrentChannelNameForSearchShortcut);
 
@@ -198,7 +213,7 @@ const Search = ({
                 setFocused(false);
             }
         }, 0);
-        updateHighlightedSearchHint();
+        updateHighlightedSearchHint(0, false);
     };
 
     const handleDropdownBlur = () => setDropdownFocused(false);
@@ -224,7 +239,7 @@ const Search = ({
         updateSearchTerms(newSearchTerms);
         
         // 필터 추가 후 바로 검색 실행
-        showSearchResults();
+        showSearchResults(false);
         
         // 검색창에 포커스 유지
         setFocused(true);
@@ -262,7 +277,7 @@ const Search = ({
 
     // 검색 실행 함수 - 검색 버튼 클릭이나 엔터 키 입력 시 호출됨
     const handleSearch = async (): Promise<void> => {
-        updateHighlightedSearchHint();
+        updateHighlightedSearchHint(0, false);
 
         // clear the search filter
         if (searchType) {
@@ -274,7 +289,7 @@ const Search = ({
         }
 
         try {
-            await showSearchResults();
+            await showSearchResults(false);
         } finally {
             handleSearchOnSuccess();
         }
@@ -302,9 +317,6 @@ const Search = ({
         // 실시간 검색 구현 - 타이핑할 때마다 검색 결과 업데이트
         if (term.trim()) {
             // 검색어가 있을 때만 검색 실행
-            const debouncedSearch = debounce(() => {
-                showSearchResults();
-            }, 300); // 300ms 딜레이로 디바운스 적용
             debouncedSearch();
         }
 
@@ -332,54 +344,7 @@ const Search = ({
                 updateSearchType(highlightedSearchHintIndex === 0 ? 'messages' : 'files');
                 setHighlightedSearchHintIndex(-1);
             } else {
-                const handleSetSearchFilter = (filterType: SearchFilterType): void => {
-                    switch (filterType) {
-                    case 'all':
-                        if (searchFilterType === 'all') {
-                            // No change needed
-                            return;
-                        }
 
-                        setSearchFilterType('all');
-                        updateRhsState(RHSStates.SEARCH);
-                        // 필터 변경 후 바로 검색 결과 업데이트
-                        showSearchResults();
-                        break;
-                    case 'documents':
-                        if (searchFilterType === 'documents') {
-                            // No change needed
-                            return;
-                        }
-
-                        setSearchFilterType('documents');
-                        updateRhsState(RHSStates.SEARCH);
-                        // 필터 변경 후 바로 검색 결과 업데이트
-                        showSearchResults();
-                        break;
-                    case 'channels':
-                        if (searchFilterType === 'channels') {
-                            // No change needed
-                            return;
-                        }
-
-                        setSearchFilterType('channels');
-                        updateRhsState(RHSStates.SEARCH);
-                        // 필터 변경 후 바로 검색 결과 업데이트
-                        showSearchResults();
-                        break;
-                    case 'people':
-                        if (searchFilterType === 'people') {
-                            // No change needed
-                            return;
-                        }
-
-                        setSearchFilterType('people');
-                        updateRhsState(RHSStates.SEARCH);
-                        // 필터 변경 후 바로 검색 결과 업데이트
-                        showSearchResults();
-                        break;
-                    }
-                };
                 handleAddSearchTerm(visibleSearchHintOptions[highlightedSearchHintIndex].searchTerm);
             }
             return;
@@ -425,52 +390,16 @@ const Search = ({
     };
 
     const handleSetSearchFilter = (filterType: SearchFilterType): void => {
-        switch (filterType) {
-        case 'all':
-            if (searchFilterType === 'all') {
-                // No change needed
-                return;
-            }
-
-            setSearchFilterType('all');
-            updateRhsState(RHSStates.SEARCH);
-            // 필터 변경 후 바로 검색 결과 업데이트
-            showSearchResults();
-            break;
-        case 'documents':
-            if (searchFilterType === 'documents') {
-                // No change needed
-                return;
-            }
-
-            setSearchFilterType('documents');
-            updateRhsState(RHSStates.SEARCH);
-            // 필터 변경 후 바로 검색 결과 업데이트
-            showSearchResults();
-            break;
-        case 'channels':
-            if (searchFilterType === 'channels') {
-                // No change needed
-                return;
-            }
-
-            setSearchFilterType('channels');
-            updateRhsState(RHSStates.SEARCH);
-            // 필터 변경 후 바로 검색 결과 업데이트
-            showSearchResults();
-            break;
-        case 'people':
-            if (searchFilterType === 'people') {
-                // No change needed
-                return;
-            }
-
-            setSearchFilterType('people');
-            updateRhsState(RHSStates.SEARCH);
-            // 필터 변경 후 바로 검색 결과 업데이트
-            showSearchResults();
-            break;
+        // 필터 타입이 같으면 변경하지 않음
+        if (searchFilterType === filterType) {
+            return;
         }
+
+        setSearchFilterType(filterType);
+        updateRhsState(RHSStates.SEARCH);
+        
+        // 필터 변경 후 바로 검색 결과 업데이트
+        showSearchResults(false);
     };
 
     const setHoverHintIndex = (_highlightedSearchHintIndex: number): void => {
@@ -492,7 +421,7 @@ const Search = ({
         
         // 필터 제거 후 바로 검색 실행
         if (cleanedTerms) {
-            showSearchResults();
+            showSearchResults(false);
         }
         
         // 검색창에 포커스 유지
@@ -531,6 +460,7 @@ const Search = ({
                     </h4>
                     {filtersUsed > 0 && (
                         <button 
+                            type="button"
                             className="search-filters-clear-button" 
                             onClick={handleClearFilters}
                             aria-label="Clear all filters"
@@ -574,7 +504,7 @@ const Search = ({
                 </div>
             </div>
             <SearchBar
-                updateHighlightedSearchHint={updateHighlightedSearchHint}
+                updateHighlightedSearchHint={(delta: number, keyPress: boolean) => updateHighlightedSearchHint(delta, keyPress)}
                 handleEnterKey={handleEnterKey}
                 handleClear={handleClear}
                 handleChange={handleChange}
@@ -614,6 +544,7 @@ const Search = ({
                         className='icon icon--standard'
                         aria-hidden='true'
                     />
+                    {null /* 필요한 children 속성 추가 */}
                 </HeaderIconWrapper>
             );
         }

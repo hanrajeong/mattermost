@@ -1,0 +1,62 @@
+// Custom theme for LinKB Mattermost
+// Pantone 411c - C70 M65 Y75 K25 / R84 G80 B69 - for top bar (global header)
+// Pantone 404C - C0 M10 Y20 K65 / R96 G88 B76 - for left sidebar
+
+:root {
+  // Global header color (top bar with LinKB)
+  --global-header-background: #545045;
+  --global-header-text: #ffffff;
+  
+  // Sidebar colors (left side with CHANNELS)
+  --sidebar-bg: #60584C;
+  --sidebar-header-bg: #60584C;
+  --sidebar-text: #ffffff;
+  --sidebar-text-active-border: #ffffff;
+  --sidebar-text-active-color: #ffffff;
+  --sidebar-text-hover-bg: #4a443b;
+  --sidebar-team-background: #545045; // Slightly darker than sidebar
+}
+
+// Override global header styles
+.global-header {
+  background: var(--global-header-background) !important;
+  color: var(--global-header-text) !important;
+
+  .header-left-container {
+    background-color: var(--global-header-background) !important;
+  }
+  
+  .header-right-container {
+    background-color: var(--global-header-background) !important;
+  }
+}
+
+// Override sidebar styles
+.SidebarContainer {
+  background-color: var(--sidebar-bg) !important;
+  
+  .SidebarHeader {
+    background-color: var(--sidebar-header-bg) !important;
+  }
+  
+  .SidebarChannelGroup {
+    .SidebarChannelGroupHeader {
+      color: var(--sidebar-text) !important;
+    }
+  }
+  
+  .SidebarLink {
+    &.active {
+      background: rgba(255, 255, 255, 0.1) !important;
+    }
+    
+    &:hover {
+      background: var(--sidebar-text-hover-bg) !important;
+    }
+  }
+}
+
+// Team sidebar
+.team-sidebar {
+  background-color: var(--sidebar-team-background) !important;
+}

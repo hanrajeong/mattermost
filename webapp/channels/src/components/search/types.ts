@@ -10,7 +10,7 @@ import type {ServerError} from '@mattermost/types/errors';
 
 import type {SearchType} from 'types/store/rhs';
 
-export type SearchFilterType = 'all' | 'documents' | 'spreadsheets' | 'presentations' | 'code' | 'images' | 'audio' | 'video';
+export type SearchFilterType = 'all' | 'documents' | 'spreadsheets' | 'presentations' | 'code' | 'images' | 'audio' | 'video' | 'channels' | 'people';
 
 export type OwnProps = {
     isSideBarRight?: boolean;

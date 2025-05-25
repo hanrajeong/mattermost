@@ -103,7 +103,7 @@ import {loadChannelsForCurrentUser} from 'actions/channel_actions';
 import {
     getTeamsUsage,
 } from 'actions/cloud';
-import {loadCustomEmojisIfNeeded} from 'actions/emoji_actions';
+import {loadCustomEmojisIfNeeded, loadCustomEmojisForCustomStatusesByUserIds} from 'actions/emoji_actions';
 import {redirectUserToDefaultTeam} from 'actions/global_actions';
 import {sendDesktopNotification} from 'actions/notification_actions';
 import {handleNewPost} from 'actions/post_actions';
