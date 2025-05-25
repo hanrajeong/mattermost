@@ -220,7 +220,7 @@ export const it = {
         }
         return false;
     },
-    stateMatches: (key: string, regex: RegExp) => (config: Partial<AdminConfig>, state: any) => state[key].match(regex),
+    stateMatches: (key: string, regex: RegExp) => (config: Partial<AdminConfig>, state: any) => state[key] ? state[key].match(regex) : false,
     stateEquals: (key: string, value: any) => (config: Partial<AdminConfig>, state: any) => state[key] === value,
     stateIsTrue: (key: string) => (config: Partial<AdminConfig>, state: any) => Boolean(state[key]),
     stateIsFalse: (key: string) => (config: Partial<AdminConfig>, state: any) => !state[key],
