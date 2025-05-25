@@ -29,10 +29,17 @@ export function displayUsername(
 ): string {
     let name = useFallbackUsername ? localizeMessage({id: 'channel_loader.someone', defaultMessage: 'Someone'}) : '';
     if (user) {
+        // 항상 실제 이름을 우선적으로 표시
+        const fullName = getFullName(user);
+        if (fullName && fullName.trim().length > 0) {
+            return fullName;
+        }
+        
+        // 실제 이름이 없는 경우 기존 로직 적용
         if (teammateNameDisplay === Preferences.DISPLAY_PREFER_NICKNAME) {
-            name = user.nickname || getFullName(user);
+            name = user.nickname || user.username;
         } else if (teammateNameDisplay === Preferences.DISPLAY_PREFER_FULL_NAME) {
-            name = getFullName(user);
+            name = user.username; // 이미 fullName이 없다고 확인됨
         } else {
             name = user.username;
         }
