@@ -9,6 +9,7 @@ import {useIntl} from 'react-intl';
 import {Client4} from 'mattermost-redux/client';
 
 import BotDefaultIcon from 'images/bot_default_icon.png';
+import DefaultProfileImage from './profile.jpg';
 
 import './avatar.scss';
 
@@ -47,8 +48,12 @@ type Props = {
 
 type Attrs = HTMLAttributes<HTMLElement>;
 
-const isURLForUser = (url: string) => url.startsWith(Client4.getUsersRoute());
-const replaceURLWithDefaultImageURL = (url: string) => url.replace(/\?_=(\w+)/, '/default');
+const isURLForUser = (url: string) => url && url.startsWith(Client4.getUsersRoute());
+
+// 사용자 정의 기본 프로필 이미지를 반환하는 함수
+const getDefaultProfileImageUrl = () => {
+    return DefaultProfileImage;
+};
 
 const Avatar = forwardRef<HTMLElement, Props & Attrs>(({
     url,
@@ -73,12 +78,24 @@ const Avatar = forwardRef<HTMLElement, Props & Attrs>(({
     }
 
     function handleOnError(e: SyntheticEvent<HTMLImageElement, Event>) {
-        const fallbackSrc = (url && isURLForUser(url)) ? replaceURLWithDefaultImageURL(url) : BotDefaultIcon;
+        // 사용자 프로필 이미지인 경우 기본 프로필 이미지로 대체
+        let fallbackSrc;
+        
+        if (url && isURLForUser(url)) {
+            // 사용자 프로필 이미지인 경우 커스텀 프로필 이미지로 대체
+            fallbackSrc = getDefaultProfileImageUrl();
+        } else {
+            // 봇이나 다른 유형의 이미지인 경우 기본 봇 아이콘 사용
+            fallbackSrc = BotDefaultIcon;
+        }
 
         if (e.currentTarget.src !== fallbackSrc) {
             e.currentTarget.src = fallbackSrc;
         }
     }
+
+    // URL이 없거나 비어 있는 경우 커스텀 기본 이미지 사용
+    const imageSrc = url || getDefaultProfileImageUrl();
 
     return (
         <img
@@ -88,7 +105,7 @@ const Avatar = forwardRef<HTMLElement, Props & Attrs>(({
             alt={formatMessage({id: 'avatar.alt', defaultMessage: '{username} profile image'}, {
                 username: username || 'user',
             })}
-            src={url}
+            src={imageSrc}
             loading='lazy'
             onError={handleOnError}
         />
