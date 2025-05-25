@@ -5,7 +5,7 @@
 
 CURR_DIR=$(pwd)
 PACKAGE_DIR="mattermost_package"
-TARGET_FILE="mattermost_closed_network.tar.gz"
+TARGET_FILE="mattermost_closed_network.zip"
 SPLIT_SIZE="1900M"
 
 echo "[📦] Mattermost 폐쇄망 배포 패키지 생성 시작..."
@@ -72,9 +72,9 @@ for SCRIPT in "install.sh" "restore_package.sh"; do
     fi
 done
 
-# 7. 압축 (gzip)
-echo "[🗜️] tar.gz 파일 생성 중..."
-tar -czf "$TARGET_FILE" "$PACKAGE_DIR"
+# 7. 압축 (zip)
+echo "[🗜️] zip 파일 생성 중..."
+zip -r "$TARGET_FILE" "$PACKAGE_DIR"
 
 # 8. 분할 압축
 echo "[🔄] ${SPLIT_SIZE} 단위로 분할 중..."
@@ -98,7 +98,7 @@ echo "  - restore_package.sh"
 echo ""
 echo "📦 복원 절차:"
 echo "  1) cat ${TARGET_FILE}.part* > ${TARGET_FILE}"
-echo "  2) tar -xzf ${TARGET_FILE}"
+echo "  2) unzip ${TARGET_FILE}"
 echo "  3) cd $PACKAGE_DIR && ./install.sh"
 echo ""
 echo "💡 원본 소스 및 파일들은 삭제되지 않았으며 안전하게 보존되어 있습니다."

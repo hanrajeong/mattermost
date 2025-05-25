@@ -1,186 +1,209 @@
 #!/bin/bash
 
-# 시스템 설정 검사 스크립트 - 서버 마이그레이션용
-# 작성일: 2025-05-25
+# 시스템 마이그레이션 종합 검증 스크립트
+# 작성일: 2025-05-25 (표준 확장판)
 
-# 변수 설정
 HOSTNAME=$(hostname)
 TIMESTAMP=$(date '+%Y%m%d_%H%M%S')
 OUTPUT_FILE="system_config_${HOSTNAME}_${TIMESTAMP}.txt"
 
-# 헤더 출력
+# 시작 헤더
+cat <<-EOF | tee "$OUTPUT_FILE"
+====================================================
+시스템 마이그레이션 검증 보고서
+서버 이름: $HOSTNAME
+실행 일시: $(date)
+====================================================
+
+EOF
+
+# 커널 및 부트로더
+{
+  echo "## 커널 & 부트로더"
+  uname -a
+  echo "* /proc/cmdline: $(cat /proc/cmdline)"
+  echo "## /etc/default/grub"
+  grep -vE '^#' /etc/default/grub 2>/dev/null || echo "grub 파일 없음"
+  echo
+} | tee -a "$OUTPUT_FILE"
+
+# 하드웨어
+{
+  echo "## 하드웨어 정보"
+  lscpu | grep -E 'Model name|CPU\(s\)|Thread|Socket|NUMA'
+  free -h
+  echo
+} | tee -a "$OUTPUT_FILE"
+
+# OS 및 패키지
+{
+  echo "## OS & 패키지 정보"
+  cat /etc/os-release 2>/dev/null
+  cat /etc/redhat-release 2>/dev/null
+  echo "## 설치된 패키지 목록"
+  rpm -qa | sort
+  echo "## Yum 레포 목록"
+  ls /etc/yum.repos.d/ | tee /dev/null && grep -H '^\[' /etc/yum.repos.d/*.repo
+  echo
+} | tee -a "$OUTPUT_FILE"
+
+# 프로세스 & 리소스
+{
+  echo "## 프로세스 & 리소스 제한"
+  echo "* pid_max: $(cat /proc/sys/kernel/pid_max)"
+  echo "* max user processes: $(ulimit -u)"
+  echo "* open files per proc: $(ulimit -n)"
+  echo "* fs.file-max: $(cat /proc/sys/fs/file-max)"
+  echo "* vm.swappiness: $(cat /proc/sys/vm/swappiness)"
+  echo "* overcommit_memory: $(cat /proc/sys/vm/overcommit_memory)"
+  echo "* overcommit_ratio: $(cat /proc/sys/vm/overcommit_ratio)"
+  echo
+} | tee -a "$OUTPUT_FILE"
+
+# limits.conf
+{
+  echo "## /etc/security/limits.conf"
+  grep -vE '^#|^$' /etc/security/limits.conf
+  echo
+} | tee -a "$OUTPUT_FILE"
+
+# sysctl 파라미터
+{
+  echo "## sysctl 파라미터"
+  sysctl -a 2>/dev/null | grep -E 'fs\.|net\.|kernel\.|vm\.' | sort
+  echo
+} | tee -a "$OUTPUT_FILE"
+
+# I/O 스케줄러 & Transparent HugePages
+{
+  echo "## 디스크 I/O 스케줄러"
+  for d in /sys/block/sd*; do
+    echo "$(basename $d): $(cat $d/queue/scheduler)"
+  done
+  echo "## Transparent HugePages"
+  cat /sys/kernel/mm/transparent_hugepage/enabled 2>/dev/null
+  cat /sys/kernel/mm/transparent_hugepage/defrag 2>/dev/null
+  echo
+} | tee -a "$OUTPUT_FILE"
+
+# 파일시스템 & 마운트
+{
+  echo "## 디스크 & 마운트"
+  df -h
+  lsblk
+  mount | grep -E '^/dev'
+  echo "## /etc/fstab"
+  grep -vE '^#|^$' /etc/fstab
+  echo
+} | tee -a "$OUTPUT_FILE"
+
+# 네트워크
+{
+  echo "## 네트워크 설정"
+  ip addr
+  ip route
+  ss -tuln
+  echo "## DNS & nsswitch"
+  cat /etc/resolv.conf
+  cat /etc/nsswitch.conf | grep hosts
+  echo
+} | tee -a "$OUTPUT_FILE"
+
+# SSH & 보안
+{
+  echo "## SSH 설정"
+  grep -vE '^#|^$' /etc/ssh/sshd_config
+  echo "## 사용자 계정 & 그룹"
+  awk -F: '$3>=1000{print $1" "$3" "$4}' /etc/passwd
+  getent group
+  echo "## sudoers"
+  grep -H -vE '^#|^$' /etc/sudoers /etc/sudoers.d/* 2>/dev/null
+  echo "## authorized_keys"
+  for u in $(awk -F: '$3>=1000{print $1}' /etc/passwd); do
+    echo "--- $u ---"
+    [ -f /home/$u/.ssh/authorized_keys ] && cat /home/$u/.ssh/authorized_keys
+  done
+  echo
+} | tee -a "$OUTPUT_FILE"
+
+# 서비스 & 데몬
+{
+  echo "## 실행 중 서비스"
+  systemctl list-units --type=service --state=running | grep -E 'weblogic|oracle|postgres|mysql|nginx|apache|httpd|tomcat|cron'
+  echo "## cron jobs"
+  for u in root $(awk -F: '$3>=1000{print $1}' /etc/passwd); do
+    echo "--- $u cron ---"
+    crontab -u $u -l 2>/dev/null
+  done
+  echo "## audit rules"
+  auditctl -l 2>/dev/null
+  echo
+} | tee -a "$OUTPUT_FILE"
+
+# Java & WebLogic
+{
+  echo "## Java 설정"
+  command -v java &>/dev/null && java -version 2>&1
+  echo "JAVA_HOME=$JAVA_HOME"
+  echo "## WebLogic 설정"
+  if [ -n "$WL_HOME" ] && [ -f "$WL_HOME/server/lib/weblogic.jar" ]; then
+    java -cp "$WL_HOME/server/lib/weblogic.jar" weblogic.version | head -2
+  fi
+  echo
+} | tee -a "$OUTPUT_FILE"
+
+# 보안 & 로그
+{
+  echo "## SELinux & 방화벽"
+  getenforce 2>/dev/null
+  systemctl is-active firewalld 2>/dev/null
+  iptables -L | head -n 10
+  echo "## 로그로테이트"
+  grep -H '^rotate' /etc/logrotate.conf /etc/logrotate.d/*
+  echo
+} | tee -a "$OUTPUT_FILE"
+
+# 시간 & NTP
+{
+  echo "## 시간 설정"
+  timedatectl
+  echo "localtime link → $(readlink -f /etc/localtime)"
+  echo "NTP server:"
+  grep '^server' /etc/ntp.conf /etc/chrony.conf 2>/dev/null
+  echo
+} | tee -a "$OUTPUT_FILE"
+
+# 커널 모듈 & 드라이버
+{
+  echo "## 커널 모듈"
+  lsmod | head -n 20
+  echo "## PCI 장치"
+  lspci | head -n 20
+  echo "## 네트워크 드라이버 & 설정"
+  for iface in $(ls /sys/class/net); do
+    ethtool -i $iface | tee -a "$OUTPUT_FILE"
+  done
+  echo
+} | tee -a "$OUTPUT_FILE"
+
+# 바이너리 무결성
+{
+  echo "## 주요 바이너리 해시"
+  [ -x "$(command -v java)" ] && sha256sum "$(command -v java)"
+  [ -f "$WL_HOME/server/lib/weblogic.jar" ] && sha256sum "$WL_HOME/server/lib/weblogic.jar"
+  echo
+} | tee -a "$OUTPUT_FILE"
+
+# 패키지 버전 비교
+{
+  echo "## 주요 패키지 버전"
+  rpm -qa | grep -E 'glibc|kernel|weblogic|jdk|openssl|postgres' | sort
+  echo
+} | tee -a "$OUTPUT_FILE"
+
+# 마무리
 echo "====================================================" | tee -a "$OUTPUT_FILE"
-echo "시스템 설정 검사 보고서" | tee -a "$OUTPUT_FILE"
-echo "서버 이름: $HOSTNAME" | tee -a "$OUTPUT_FILE"
-echo "실행 일시: $(date)" | tee -a "$OUTPUT_FILE"
-echo "====================================================" | tee -a "$OUTPUT_FILE"
-echo "" | tee -a "$OUTPUT_FILE"
+echo "검증 완료: $OUTPUT_FILE" | tee -a "$OUTPUT_FILE"
+echo "AS-IS/TO-BE 각각 실행 후 diff로 비교하세요." | tee -a "$OUTPUT_FILE"
 
-# 실행 중인 커널 정보
-echo "## 커널 정보" | tee -a "$OUTPUT_FILE"
-echo "* 커널 버전:" | tee -a "$OUTPUT_FILE"
-uname -a | tee -a "$OUTPUT_FILE"
-echo "" | tee -a "$OUTPUT_FILE"
-
-# CPU, 메모리 정보
-echo "## 하드웨어 정보" | tee -a "$OUTPUT_FILE"
-echo "* CPU 정보:" | tee -a "$OUTPUT_FILE"
-grep "model name" /proc/cpuinfo | head -1 | tee -a "$OUTPUT_FILE"
-echo "* CPU 코어 수:" | tee -a "$OUTPUT_FILE"
-grep -c "processor" /proc/cpuinfo | tee -a "$OUTPUT_FILE"
-echo "* 메모리 정보:" | tee -a "$OUTPUT_FILE"
-free -h | tee -a "$OUTPUT_FILE"
-echo "" | tee -a "$OUTPUT_FILE"
-
-# OS 버전
-echo "## OS 버전 정보" | tee -a "$OUTPUT_FILE"
-if [ -f /etc/os-release ]; then
-    cat /etc/os-release | tee -a "$OUTPUT_FILE"
-elif [ -f /etc/redhat-release ]; then
-    cat /etc/redhat-release | tee -a "$OUTPUT_FILE"
-else
-    echo "OS 버전 파일을 찾을 수 없습니다." | tee -a "$OUTPUT_FILE"
-fi
-echo "" | tee -a "$OUTPUT_FILE"
-
-# 프로세스 관련 설정
-echo "## 프로세스 설정" | tee -a "$OUTPUT_FILE"
-echo "* PID 최대값:" | tee -a "$OUTPUT_FILE"
-cat /proc/sys/kernel/pid_max | tee -a "$OUTPUT_FILE"
-echo "* 최대 사용자 프로세스 수:" | tee -a "$OUTPUT_FILE"
-ulimit -u | tee -a "$OUTPUT_FILE"
-echo "* 최대 열린 파일 수:" | tee -a "$OUTPUT_FILE"
-ulimit -n | tee -a "$OUTPUT_FILE"
-echo "* 시스템 전체 최대 열린 파일 수:" | tee -a "$OUTPUT_FILE"
-cat /proc/sys/fs/file-max | tee -a "$OUTPUT_FILE"
-echo "" | tee -a "$OUTPUT_FILE"
-
-# 시스템 한계 설정
-echo "## 시스템 한계 설정 (/etc/security/limits.conf)" | tee -a "$OUTPUT_FILE"
-if [ -f /etc/security/limits.conf ]; then
-    grep -v "^#" /etc/security/limits.conf | grep -v "^$" | tee -a "$OUTPUT_FILE"
-else
-    echo "limits.conf 파일을 찾을 수 없습니다." | tee -a "$OUTPUT_FILE"
-fi
-echo "" | tee -a "$OUTPUT_FILE"
-
-# 시스템 설정 (sysctl)
-echo "## 시스템 설정 (sysctl)" | tee -a "$OUTPUT_FILE"
-echo "* 네트워크 설정:" | tee -a "$OUTPUT_FILE"
-sysctl -a | grep net.ipv4 | grep -E 'tcp_max_syn_backlog|tcp_syncookies|tcp_fin_timeout|tcp_tw_reuse|ip_local_port_range|rmem_max|wmem_max' | tee -a "$OUTPUT_FILE"
-echo "* 커널 설정:" | tee -a "$OUTPUT_FILE"
-sysctl -a | grep -E 'kernel.shmmax|kernel.shmall|kernel.shmmni|kernel.sem|kernel.msgmni|kernel.msgmax' | tee -a "$OUTPUT_FILE"
-echo "* 파일 시스템 설정:" | tee -a "$OUTPUT_FILE"
-sysctl -a | grep -E 'fs.file-max|fs.aio-max-nr' | tee -a "$OUTPUT_FILE"
-echo "" | tee -a "$OUTPUT_FILE"
-
-# 디스크 정보
-echo "## 디스크 정보" | tee -a "$OUTPUT_FILE"
-echo "* 디스크 사용량:" | tee -a "$OUTPUT_FILE"
-df -h | tee -a "$OUTPUT_FILE"
-echo "* 파일 시스템 타입:" | tee -a "$OUTPUT_FILE"
-mount | grep -E '/ |/boot|/home|/tmp|/var' | tee -a "$OUTPUT_FILE"
-echo "" | tee -a "$OUTPUT_FILE"
-
-# 네트워크 설정
-echo "## 네트워크 설정" | tee -a "$OUTPUT_FILE"
-echo "* 네트워크 인터페이스:" | tee -a "$OUTPUT_FILE"
-ip addr | tee -a "$OUTPUT_FILE"
-echo "* 라우팅 테이블:" | tee -a "$OUTPUT_FILE"
-ip route | tee -a "$OUTPUT_FILE"
-echo "* 네트워크 포트 상태:" | tee -a "$OUTPUT_FILE"
-ss -tuln | tee -a "$OUTPUT_FILE"
-echo "" | tee -a "$OUTPUT_FILE"
-
-# Java 관련 설정 (JDK 버전 등)
-echo "## Java 환경 설정" | tee -a "$OUTPUT_FILE"
-echo "* Java 버전:" | tee -a "$OUTPUT_FILE"
-if command -v java &> /dev/null; then
-    java -version 2>&1 | tee -a "$OUTPUT_FILE"
-else
-    echo "Java가 설치되어 있지 않습니다." | tee -a "$OUTPUT_FILE"
-fi
-echo "* JAVA_HOME:" | tee -a "$OUTPUT_FILE"
-echo $JAVA_HOME | tee -a "$OUTPUT_FILE"
-echo "" | tee -a "$OUTPUT_FILE"
-
-# WebLogic 관련 설정
-echo "## WebLogic 설정" | tee -a "$OUTPUT_FILE"
-echo "* WebLogic 설치 경로:" | tee -a "$OUTPUT_FILE"
-if [ -n "$WL_HOME" ]; then
-    echo "$WL_HOME" | tee -a "$OUTPUT_FILE"
-    echo "* WebLogic 버전:" | tee -a "$OUTPUT_FILE"
-    if [ -f "$WL_HOME/server/lib/weblogic.jar" ]; then
-        java -cp "$WL_HOME/server/lib/weblogic.jar" weblogic.version 2>&1 | head -2 | tee -a "$OUTPUT_FILE"
-    else
-        echo "WebLogic JAR 파일을 찾을 수 없습니다." | tee -a "$OUTPUT_FILE"
-    fi
-else
-    echo "WebLogic 환경 변수가 설정되지 않았습니다." | tee -a "$OUTPUT_FILE"
-fi
-echo "" | tee -a "$OUTPUT_FILE"
-
-# 보안 설정
-echo "## 보안 설정" | tee -a "$OUTPUT_FILE"
-echo "* SELinux 상태:" | tee -a "$OUTPUT_FILE"
-if command -v getenforce &> /dev/null; then
-    getenforce | tee -a "$OUTPUT_FILE"
-else
-    echo "SELinux 명령어를 찾을 수 없습니다." | tee -a "$OUTPUT_FILE"
-fi
-echo "* 방화벽 상태:" | tee -a "$OUTPUT_FILE"
-if command -v systemctl &> /dev/null; then
-    systemctl status firewalld | grep Active | tee -a "$OUTPUT_FILE"
-elif command -v service &> /dev/null; then
-    service iptables status | grep -i "running\|active" | tee -a "$OUTPUT_FILE"
-else
-    echo "방화벽 상태를 확인할 수 없습니다." | tee -a "$OUTPUT_FILE"
-fi
-echo "" | tee -a "$OUTPUT_FILE"
-
-# 시스템 서비스
-echo "## 시스템 서비스" | tee -a "$OUTPUT_FILE"
-echo "* 실행 중인 주요 서비스:" | tee -a "$OUTPUT_FILE"
-if command -v systemctl &> /dev/null; then
-    systemctl list-units --type=service --state=running | grep -E 'weblogic|oracle|postgres|mysql|nginx|apache|httpd|tomcat' | tee -a "$OUTPUT_FILE"
-elif command -v service &> /dev/null; then
-    service --status-all | grep -E 'weblogic|oracle|postgres|mysql|nginx|apache|httpd|tomcat' | tee -a "$OUTPUT_FILE"
-else
-    echo "서비스 상태를 확인할 수 없습니다." | tee -a "$OUTPUT_FILE"
-fi
-echo "" | tee -a "$OUTPUT_FILE"
-
-# 타임존 설정
-echo "## 시간 설정" | tee -a "$OUTPUT_FILE"
-echo "* 타임존:" | tee -a "$OUTPUT_FILE"
-timedatectl 2>/dev/null || (ls -l /etc/localtime && date) | tee -a "$OUTPUT_FILE"
-echo "* NTP 설정:" | tee -a "$OUTPUT_FILE"
-if [ -f /etc/ntp.conf ]; then
-    grep "^server" /etc/ntp.conf | tee -a "$OUTPUT_FILE"
-elif [ -f /etc/chrony.conf ]; then
-    grep "^server" /etc/chrony.conf | tee -a "$OUTPUT_FILE"
-else
-    echo "NTP 설정 파일을 찾을 수 없습니다." | tee -a "$OUTPUT_FILE"
-fi
-echo "" | tee -a "$OUTPUT_FILE"
-
-# 사용자 환경 변수
-echo "## 시스템 환경 변수" | tee -a "$OUTPUT_FILE"
-echo "* PATH:" | tee -a "$OUTPUT_FILE"
-echo $PATH | tee -a "$OUTPUT_FILE"
-echo "* LD_LIBRARY_PATH:" | tee -a "$OUTPUT_FILE"
-echo $LD_LIBRARY_PATH | tee -a "$OUTPUT_FILE"
-echo "" | tee -a "$OUTPUT_FILE"
-
-echo "====================================================" | tee -a "$OUTPUT_FILE"
-echo "검사 완료!" | tee -a "$OUTPUT_FILE"
-echo "결과 파일: $OUTPUT_FILE" | tee -a "$OUTPUT_FILE"
-echo "====================================================" | tee -a "$OUTPUT_FILE"
-
-# 권한 설정
 chmod 644 "$OUTPUT_FILE"
-
-echo "시스템 설정 검사가 완료되었습니다."
-echo "결과 파일은 $OUTPUT_FILE 에 저장되었습니다."
-echo "이 파일을 AS-IS(현재) 및 TO-BE(새 서버) 시스템에서 각각 실행한 후 비교하세요."
-echo "diff를 사용하여 비교할 수 있습니다: diff AS-IS_파일.txt TO-BE_파일.txt"
