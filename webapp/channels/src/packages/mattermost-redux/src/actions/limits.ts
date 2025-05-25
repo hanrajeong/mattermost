@@ -16,7 +16,23 @@ export function getServerLimits(): ActionFuncAsync<ServerLimits> {
     return async (dispatch, getState) => {
         const roles = getCurrentUserRoles(getState());
         const amIAdmin = isAdmin(roles);
+        
+        // 관리자가 아닌 경우 기본 값을 반환
         if (!amIAdmin) {
+            return {
+                data: {
+                    activeUserCount: 0,
+                    maxUsersLimit: 0,
+                },
+            };
+        }
+        
+        // 엔터프라이즈 버전인지 확인 (서버 정보에서 확인 가능)
+        const state = getState();
+        const isEnterpriseReady = state?.entities?.general?.license?.IsLicensed === 'true';
+        
+        // 엔터프라이즈 버전이 아닌 경우 API 호출 안함
+        if (!isEnterpriseReady) {
             return {
                 data: {
                     activeUserCount: 0,
@@ -30,8 +46,16 @@ export function getServerLimits(): ActionFuncAsync<ServerLimits> {
             response = await Client4.getServerLimits();
         } catch (err) {
             forceLogoutIfNecessary(err, dispatch, getState);
-            dispatch(logError(err));
-            return {error: err as ServerError};
+            // 404 오류는 로그에 기록하지 않음 (엔터프라이즈 버전이 아닌 경우 발생하는 오류)
+            if (!(err as ServerError).status_code || (err as ServerError).status_code !== 404) {
+                dispatch(logError(err));
+            }
+            return {
+                data: {
+                    activeUserCount: 0,
+                    maxUsersLimit: 0,
+                },
+            };
         }
 
         const data: ServerLimits = {
