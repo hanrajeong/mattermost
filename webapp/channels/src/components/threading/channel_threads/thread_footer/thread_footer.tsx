@@ -61,8 +61,8 @@ function ThreadFooter({
             dispatch(getPostThread(threadId, true)).then((result) => {
                 if (result.data) {
                     const posts = Object.values(result.data.posts)
-                        .filter((p) => p.id !== threadId) // 원본 포스트 제외
-                        .sort((a, b) => a.create_at - b.create_at); // 시간순 정렬
+                        .filter((p: Post) => p.id !== threadId) // 원본 포스트 제외
+                        .sort((a: Post, b: Post) => b.create_at - a.create_at); // 최신순 정렬(내림차순)
                     setReplyPosts(posts);
                 }
             });
@@ -163,6 +163,12 @@ function ThreadFooter({
                     
                     {showReplies && replyPosts.length > 0 && (
                         <div className='ReplyPreviewContainer'>
+                            <div className='LatestRepliesHeader'>
+                                <FormattedMessage
+                                    id='threading.latestReplies'
+                                    defaultMessage='최신 댓글'
+                                />
+                            </div>
                             {replyPosts.slice(0, 3).map((replyPost) => (
                                 <ReplyPreview 
                                     key={replyPost.id}

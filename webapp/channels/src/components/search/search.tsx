@@ -5,6 +5,8 @@ import React, {useEffect, useState, useRef, useCallback} from 'react';
 import type {ChangeEvent, FormEvent} from 'react';
 import {useIntl} from 'react-intl';
 import {useSelector} from 'react-redux';
+import debounce from 'lodash/debounce';
+import {trackEvent} from 'mattermost-redux/actions/telemetry_actions';
 
 import {getCurrentChannelNameForSearchShortcut} from 'mattermost-redux/selectors/entities/channels';
 
@@ -276,9 +278,37 @@ const Search = ({
         setFocused(true);
     };
 
+    // 검색 실행 함수
+    const handleSearch = async (): Promise<void> => {
+        if (!searchTerms) {
+            return;
+        }
+
+        trackEvent('ui', 'ui_rhs_search');
+
+        const teamId = searchTeam || currentChannel?.team_id;
+        await showSearchResults(isMentionSearch);
+        updateSearchTeam(teamId);
+    };
+
+    // 검색어 입력 시 실시간으로 검색 결과 업데이트를 위한 디바운스 함수
+    const debouncedSearch = useCallback(
+        debounce((term: string) => {
+            if (term.trim().length > 0) {
+                handleSearch();
+            }
+        }, 500),
+        [handleSearch, searchTerms, searchTeam, currentChannel, isMentionSearch, showSearchResults, updateSearchTeam]
+    );
+
     const handleChange = (e: ChangeEvent<HTMLInputElement>): void => {
         const term = e.target.value;
         updateSearchTerms(term);
+
+        // 검색어가 있을 경우 디바운스된 검색 실행
+        if (term.trim().length > 0) {
+            debouncedSearch(term);
+        }
     };
 
     // call this function without parameters to reset `SearchHint`
@@ -343,19 +373,7 @@ const Search = ({
         });
     };
 
-    const handleSearch = async (): Promise<void> => {
-        const terms = searchTerms.trim();
 
-        if (terms.length === 0) {
-            return;
-        }
-
-        const {error} = await showSearchResults(Boolean(isMentionSearch)) as any;
-
-        if (!error) {
-            handleSearchOnSuccess();
-        }
-    };
 
     const handleSearchOnSuccess = (): void => {
         if (isMobileView) {
