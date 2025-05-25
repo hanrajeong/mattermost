@@ -1,20 +1,21 @@
 // Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
 // See LICENSE.txt for license information.
 
-import React, {memo, useCallback, useEffect, useMemo} from 'react';
+import React, {memo, useCallback, useEffect, useMemo, useState} from 'react';
 import {FormattedMessage} from 'react-intl';
 import {useDispatch, useSelector} from 'react-redux';
 
-import type {Post} from '@mattermost/types/posts';
+import type {Post, PostList} from '@mattermost/types/posts';
 import type {UserThread} from '@mattermost/types/threads';
 import {threadIsSynthetic} from '@mattermost/types/threads';
 
 import {setThreadFollow, getThread as fetchThread} from 'mattermost-redux/actions/threads';
+import {getPostThread} from 'mattermost-redux/actions/posts';
 import {Posts} from 'mattermost-redux/constants';
-import {getPost} from 'mattermost-redux/selectors/entities/posts';
+import {getPost, getPostsInThread} from 'mattermost-redux/selectors/entities/posts';
 import {getCurrentTeamId} from 'mattermost-redux/selectors/entities/teams';
 import {makeGetThreadOrSynthetic} from 'mattermost-redux/selectors/entities/threads';
-import {getCurrentUserId} from 'mattermost-redux/selectors/entities/users';
+import {getCurrentUserId, getUser} from 'mattermost-redux/selectors/entities/users';
 
 import {trackEvent} from 'actions/telemetry_actions';
 import {selectPost} from 'actions/views/rhs';
@@ -25,8 +26,11 @@ import {THREADING_TIME} from 'components/threading/common/options';
 import Timestamp from 'components/timestamp';
 import Avatars from 'components/widgets/users/avatars';
 import WithTooltip from 'components/with_tooltip';
+import ProfilePicture from 'components/profile_picture';
 
 import type {GlobalState} from 'types/store';
+
+import ReplyPreview from './reply_preview';
 
 import './thread_footer.scss';
 
@@ -45,7 +49,25 @@ function ThreadFooter({
     const post = useSelector((state: GlobalState) => getPost(state, threadId));
     const getThreadOrSynthetic = useMemo(makeGetThreadOrSynthetic, [post.id]);
     const thread = useSelector((state: GlobalState) => getThreadOrSynthetic(state, post));
-
+    
+    // 댓글 목록 상태 관리
+    const [replyPosts, setReplyPosts] = useState<Post[]>([]);
+    const [showReplies, setShowReplies] = useState(false);
+    
+    // 스레드의 댓글 가져오기
+    useEffect(() => {
+        if (thread.reply_count > 0) {
+            dispatch(getPostThread(threadId, true)).then((result) => {
+                if (result.data) {
+                    const posts = Object.values(result.data.posts)
+                        .filter((p) => p.id !== threadId) // 원본 포스트 제외
+                        .sort((a, b) => a.create_at - b.create_at); // 시간순 정렬
+                    setReplyPosts(posts);
+                }
+            });
+        }
+    }, [threadId, thread.reply_count]);
+    
     useEffect(() => {
         if (threadIsSynthetic(thread) && thread.is_following && thread.reply_count > 0) {
             dispatch(fetchThread(currentUserId, currentTeamId, threadId));
@@ -74,6 +96,12 @@ function ThreadFooter({
         e.stopPropagation();
         dispatch(selectPost({id: threadId, channel_id: channelId} as Post));
     }, [replyClick, threadId, channelId]);
+    
+    // 댓글 표시 토글
+    const toggleReplies = useCallback((e) => {
+        e.stopPropagation();
+        setShowReplies(!showReplies);
+    }, [showReplies]);
 
     const handleFollowing = useCallback((e) => {
         e.stopPropagation();
@@ -115,21 +143,44 @@ function ThreadFooter({
             ) : null}
 
             {thread.reply_count > 0 && (
-                <Button
-                    onClick={handleReply}
-                    className='ReplyButton separated'
-                    prepend={
-                        <span className='icon'>
-                            <i className='icon-reply-outline'/>
-                        </span>
-                    }
-                >
-                    <FormattedMessage
-                        id='threading.numReplies'
-                        defaultMessage='{totalReplies, plural, =0 {Reply} =1 {# reply} other {# replies}}'
-                        values={{totalReplies}}
-                    />
-                </Button>
+                <div className='ReplySection'>
+                    <Button
+                        onClick={toggleReplies}
+                        className='ReplyButton separated'
+                        prepend={
+                            <span className='icon'>
+                                <i className='icon-reply-outline'/>
+                            </span>
+                        }
+                    >
+                        <FormattedMessage
+                            id='threading.numReplies'
+                            defaultMessage='{totalReplies, plural, =0 {Reply} =1 {# reply} other {# replies}}'
+                            values={{totalReplies}}
+                        />
+                    </Button>
+                    
+                    {showReplies && replyPosts.length > 0 && (
+                        <div className='ReplyPreviewContainer'>
+                            {replyPosts.slice(0, 3).map((replyPost) => (
+                                <ReplyPreview 
+                                    key={replyPost.id}
+                                    post={replyPost}
+                                    onClick={handleReply}
+                                />
+                            ))}
+                            {replyPosts.length > 3 && (
+                                <div className='MoreReplies' onClick={handleReply}>
+                                    <FormattedMessage
+                                        id='threading.moreReplies'
+                                        defaultMessage='+ {count} more'
+                                        values={{count: replyPosts.length - 3}}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
             )}
 
             <FollowButton
