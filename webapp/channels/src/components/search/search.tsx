@@ -46,13 +46,7 @@ const determineVisibleSearchHintOptions = (searchTerms: string, searchType: Sear
         options = searchFilesHintOptions;
     }
     
-    // 검색어가 비어있으면 모든 옵션 표시
-    if (searchTerms.trim() === '') {
-        return options;
-    }
-    
     // 검색어에 상관없이 항상 모든 필터 옵션 표시
-    // 이전 구현에서는 검색어에 따라 필터 옵션이 사라졌지만 이제는 항상 표시됨
     return options;
 };
 
@@ -229,6 +223,9 @@ const Search = ({
         const newSearchTerms = searchTerms + prefix + term + ' ';
         updateSearchTerms(newSearchTerms);
         
+        // 필터 추가 후 바로 검색 실행
+        showSearchResults();
+        
         // 검색창에 포커스 유지
         setFocused(true);
         setKeepInputFocused(true);
@@ -265,17 +262,22 @@ const Search = ({
 
     // 검색 실행 함수 - 검색 버튼 클릭이나 엔터 키 입력 시 호출됨
     const handleSearch = async (): Promise<void> => {
-        if (!searchTerms) {
+        updateHighlightedSearchHint();
+
+        // clear the search filter
+        if (searchType) {
+            updateSearchType('');
+        }
+
+        if (!searchTerms.trim()) {
             return;
         }
 
-        trackEvent('ui', 'ui_rhs_search');
-
-        // 검색 결과를 표시하고 RHS를 열어줌
-        openRHSSearch();
-        const teamId = searchTeam || currentChannel?.team_id;
-        await showSearchResults(isMentionSearch);
-        updateSearchTeam(teamId);
+        try {
+            await showSearchResults();
+        } finally {
+            handleSearchOnSuccess();
+        }
     };
 
     // 검색어 입력 시 실시간으로 검색 결과 업데이트를 위한 디바운스 함수
@@ -296,48 +298,29 @@ const Search = ({
     const handleChange = (e: ChangeEvent<HTMLInputElement>): void => {
         const term = e.target.value;
         updateSearchTerms(term);
-
-        // 검색어가 있을 경우 디바운스된 검색 실행
-        if (term.trim().length > 0) {
-            // 즉시 RHS를 열어서 검색 UI가 보이도록 함
-            if (!searchVisible) {
-                openRHSSearch();
-            }
-            // 디바운스된 검색 실행
-            debouncedSearch(term);
-        } else if (term.trim().length === 0 && searchVisible) {
-            // 검색어가 비어있고 검색 화면이 열려 있으면 검색 결과 초기화
-            closeRightHandSide();
-        }
-    };
-
-    // call this function without parameters to reset `SearchHint`
-    const updateHighlightedSearchHint = (indexDelta = 0, changedViaKeyPress = false): void => {
-        if (Math.abs(indexDelta) > 1) {
-            return;
+        
+        // 실시간 검색 구현 - 타이핑할 때마다 검색 결과 업데이트
+        if (term.trim()) {
+            // 검색어가 있을 때만 검색 실행
+            const debouncedSearch = debounce(() => {
+                showSearchResults();
+            }, 300); // 300ms 딜레이로 디바운스 적용
+            debouncedSearch();
         }
 
-        let newIndex = highlightedSearchHintIndex + indexDelta;
+        // update the visible search hint options based on the current search terms
+        setVisibleSearchHintOptions(determineVisibleSearchHintOptions(term, searchType));
 
-        switch (indexDelta) {
-        case 1:
-            // KEY.DOWN
-            // is it at the end of the list?
-            newIndex = newIndex === visibleSearchHintOptions.length ? 0 : newIndex;
-            break;
-        case -1:
-            // KEY.UP
-            // is it at the start of the list (or initial value)?
-            newIndex = newIndex < 0 ? visibleSearchHintOptions.length - 1 : newIndex;
-            break;
-        case 0:
-        default:
-            // reset the index (e.g. on blur)
-            newIndex = -1;
+        const caps = e.target.value.length > 0 && e.target.value.charAt(0) === e.target.value.charAt(0).toUpperCase();
+
+        if (!ignoreChannelMentionCapsRef.current && caps && term.toLowerCase().indexOf('from:') !== 0 && term.toLowerCase().indexOf('in:') !== 0) {
+            updateAutocompleteChannelsForSearch(term, true);
+            ignoreChannelMentionCapsRef.current = true;
+        } else if (ignoreChannelMentionCapsRef.current && caps && term.toLowerCase().indexOf('from:') !== 0 && term.toLowerCase().indexOf('in:') !== 0) {
+            updateAutocompleteChannelsForSearch(term, true);
+        } else if (term.toLowerCase().indexOf('from:') === 0) {
+            updateAutocompleteUsersForSearch(term.substring(5), '');  // strip off from: to get user started
         }
-
-        setHighlightedSearchHintIndex(newIndex);
-        setIndexChangedViaKeyPress(changedViaKeyPress);
     };
 
     const handleEnterKey = (e: ChangeEvent<HTMLInputElement>): void => {
@@ -349,6 +332,54 @@ const Search = ({
                 updateSearchType(highlightedSearchHintIndex === 0 ? 'messages' : 'files');
                 setHighlightedSearchHintIndex(-1);
             } else {
+                const handleSetSearchFilter = (filterType: SearchFilterType): void => {
+                    switch (filterType) {
+                    case 'all':
+                        if (searchFilterType === 'all') {
+                            // No change needed
+                            return;
+                        }
+
+                        setSearchFilterType('all');
+                        updateRhsState(RHSStates.SEARCH);
+                        // 필터 변경 후 바로 검색 결과 업데이트
+                        showSearchResults();
+                        break;
+                    case 'documents':
+                        if (searchFilterType === 'documents') {
+                            // No change needed
+                            return;
+                        }
+
+                        setSearchFilterType('documents');
+                        updateRhsState(RHSStates.SEARCH);
+                        // 필터 변경 후 바로 검색 결과 업데이트
+                        showSearchResults();
+                        break;
+                    case 'channels':
+                        if (searchFilterType === 'channels') {
+                            // No change needed
+                            return;
+                        }
+
+                        setSearchFilterType('channels');
+                        updateRhsState(RHSStates.SEARCH);
+                        // 필터 변경 후 바로 검색 결과 업데이트
+                        showSearchResults();
+                        break;
+                    case 'people':
+                        if (searchFilterType === 'people') {
+                            // No change needed
+                            return;
+                        }
+
+                        setSearchFilterType('people');
+                        updateRhsState(RHSStates.SEARCH);
+                        // 필터 변경 후 바로 검색 결과 업데이트
+                        showSearchResults();
+                        break;
+                    }
+                };
                 handleAddSearchTerm(visibleSearchHintOptions[highlightedSearchHintIndex].searchTerm);
             }
             return;
@@ -373,8 +404,6 @@ const Search = ({
         });
     };
 
-
-
     const handleSearchOnSuccess = (): void => {
         if (isMobileView) {
             handleClear();
@@ -397,35 +426,50 @@ const Search = ({
 
     const handleSetSearchFilter = (filterType: SearchFilterType): void => {
         switch (filterType) {
+        case 'all':
+            if (searchFilterType === 'all') {
+                // No change needed
+                return;
+            }
+
+            setSearchFilterType('all');
+            updateRhsState(RHSStates.SEARCH);
+            // 필터 변경 후 바로 검색 결과 업데이트
+            showSearchResults();
+            break;
         case 'documents':
-            filterFilesSearchByExt(['doc', 'pdf', 'docx', 'odt', 'rtf', 'txt']);
+            if (searchFilterType === 'documents') {
+                // No change needed
+                return;
+            }
+
+            setSearchFilterType('documents');
+            updateRhsState(RHSStates.SEARCH);
+            // 필터 변경 후 바로 검색 결과 업데이트
+            showSearchResults();
             break;
-        case 'spreadsheets':
-            filterFilesSearchByExt(['xls', 'xlsx', 'ods']);
+        case 'channels':
+            if (searchFilterType === 'channels') {
+                // No change needed
+                return;
+            }
+
+            setSearchFilterType('channels');
+            updateRhsState(RHSStates.SEARCH);
+            // 필터 변경 후 바로 검색 결과 업데이트
+            showSearchResults();
             break;
-        case 'presentations':
-            filterFilesSearchByExt(['ppt', 'pptx', 'odp']);
+        case 'people':
+            if (searchFilterType === 'people') {
+                // No change needed
+                return;
+            }
+
+            setSearchFilterType('people');
+            updateRhsState(RHSStates.SEARCH);
+            // 필터 변경 후 바로 검색 결과 업데이트
+            showSearchResults();
             break;
-        case 'code':
-            filterFilesSearchByExt(['py', 'go', 'java', 'kt', 'c', 'cpp', 'h', 'html', 'js', 'ts', 'cs', 'vb', 'php', 'pl', 'r', 'rb', 'sql', 'swift', 'json']);
-            break;
-        case 'images':
-            filterFilesSearchByExt(['png', 'jpg', 'jpeg', 'bmp', 'tiff', 'svg', 'psd', 'xcf']);
-            break;
-        case 'audio':
-            filterFilesSearchByExt(['ogg', 'mp3', 'wav', 'flac']);
-            break;
-        case 'video':
-            filterFilesSearchByExt(['ogm', 'mp4', 'avi', 'webm', 'mov', 'mkv', 'mpeg', 'mpg']);
-            break;
-        default:
-            filterFilesSearchByExt([]);
-        }
-        setSearchFilterType(filterType);
-        if (isChannelFiles && currentChannel) {
-            showChannelFiles(currentChannel.id);
-        } else {
-            showSearchResults(false);
         }
     };
 
@@ -443,15 +487,20 @@ const Search = ({
     // 검색 필터 초기화 함수
     const handleClearFilters = (): void => {
         // 검색어에서 모든 필터 제거
-        const cleanedTerms = searchTerms.replace(/\b(From:|In:|On:|Before:|After:|Ext:)\s*\S+\s*/gi, '');
-        updateSearchTerms(cleanedTerms.trim());
-        // 검색 실행
-        if (cleanedTerms.trim().length > 0) {
-            debouncedSearch(cleanedTerms.trim());
+        const cleanedTerms = searchTerms.replace(/(From:|In:|On:|Before:|After:|Ext:)\s*\S+/gi, '').trim();
+        updateSearchTerms(cleanedTerms);
+        
+        // 필터 제거 후 바로 검색 실행
+        if (cleanedTerms) {
+            showSearchResults();
         }
+        
+        // 검색창에 포커스 유지
+        setFocused(true);
+        setKeepInputFocused(true);
     };
 
-    // 검색 힌트 팝오버 렌더링 함수 - 항상 표시되도록 수정
+    // 검색 힌트 팝오버 렌더링 함수 - 항상 표시되도록 수정 및 위치 변경
     const renderHintPopover = (): JSX.Element => {
         // 사용된 필터 개수 계산
         let filtersUsed = 0;
@@ -469,9 +518,9 @@ const Search = ({
         return (
             <Popover
                 id={`${isSideBarRight ? 'sbr-' : ''}searchbar-help-popup`}
-                placement='right-start' // 위치를 오른쪽으로 변경
+                placement='bottom-end' // 위치를 검색창 하단 오른쪽으로 변경
                 className={helpClass}
-                style={{marginLeft: '10px'}} // 왼쪽 여백 추가
+                style={{marginTop: '4px', width: '280px', position: 'absolute', right: 0}} // 스타일 조정
             >
                 <div className="search-filters-header" style={{display: 'flex', justifyContent: 'space-between', padding: '8px 16px', borderBottom: '1px solid rgba(0, 0, 0, 0.1)'}}>
                     <h4 className="search-filters-title" style={{margin: 0, fontSize: '14px', fontWeight: 600}}>
@@ -543,7 +592,11 @@ const Search = ({
                 searchType={searchType}
                 clearSearchType={() => updateSearchType('')}
             >
-                {!isMobileView && renderHintPopover()}
+                {!isMobileView && (
+                    <div className="search-filters-container" style={{position: 'absolute', right: 0, top: '100%', zIndex: 1000}}>
+                        {renderHintPopover()}
+                    </div>
+                )}
             </SearchBar>
         </>
     );
