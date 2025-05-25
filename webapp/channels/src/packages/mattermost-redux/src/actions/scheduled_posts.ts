@@ -36,6 +36,29 @@ export function fetchTeamScheduledPosts(teamId: string, includeDirectChannels: b
         let scheduledPosts;
 
         try {
+            // 엔터프라이즈 버전인지 확인
+            const state = getState();
+            const isEnterpriseReady = state?.entities?.general?.license?.IsLicensed === 'true';
+            
+            // 엔터프라이즈 버전이 아닌 경우 빈 결과 반환
+            if (!isEnterpriseReady) {
+                // 빈 결과를 반환하여 404 오류 방지
+                scheduledPosts = {
+                    data: [],
+                };
+                
+                dispatch({
+                    type: ScheduledPostTypes.SCHEDULED_POSTS_RECEIVED,
+                    data: {
+                        scheduledPostsByTeamId: [],
+                        prune,
+                    },
+                });
+                
+                return {data: scheduledPosts};
+            }
+            
+            // 엔터프라이즈 버전인 경우 API 호출
             scheduledPosts = await Client4.getScheduledPosts(teamId, includeDirectChannels);
             dispatch({
                 type: ScheduledPostTypes.SCHEDULED_POSTS_RECEIVED,
@@ -45,6 +68,23 @@ export function fetchTeamScheduledPosts(teamId: string, includeDirectChannels: b
                 },
             });
         } catch (error) {
+            // 404 오류는 무시하고 빈 결과 반환
+            if (error.status_code === 404) {
+                scheduledPosts = {
+                    data: [],
+                };
+                
+                dispatch({
+                    type: ScheduledPostTypes.SCHEDULED_POSTS_RECEIVED,
+                    data: {
+                        scheduledPostsByTeamId: [],
+                        prune,
+                    },
+                });
+                
+                return {data: scheduledPosts};
+            }
+            
             forceLogoutIfNecessary(error, dispatch, getState);
             dispatch(logError(error));
             return {error};

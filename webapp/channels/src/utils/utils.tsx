@@ -1073,8 +1073,34 @@ export function displayFullAndNicknameForUser(user: UserProfile) {
     return displayName;
 }
 
+// 사용자 이미지 URL 요청 오류를 방지하기 위한 맵 (이미 오류가 발생한 URL을 기록)
+const errorImageUrls: Record<string, boolean> = {};
+
 export function imageURLForUser(userId: UserProfile['id'], lastPictureUpdate = 0) {
-    return Client4.getUsersRoute() + '/' + userId + '/image?_=' + lastPictureUpdate;
+    // 사용자 ID가 없는 경우 기본 이미지 URL 반환
+    if (!userId) {
+        return defaultImageURLForUser('');
+    }
+    
+    // 이미 오류가 발생한 URL인 경우 기본 이미지 URL 반환
+    const cacheKey = `${userId}_${lastPictureUpdate}`;
+    if (errorImageUrls[cacheKey]) {
+        return defaultImageURLForUser(userId);
+    }
+    
+    // 이미지 URL 생성
+    const imageUrl = Client4.getUsersRoute() + '/' + userId + '/image?_=' + lastPictureUpdate;
+    
+    // 이미지 로드 테스트 (비동기적으로 수행)
+    const img = new Image();
+    img.onerror = () => {
+        // 이미지 로드 실패 시 캐시에 기록
+        errorImageUrls[cacheKey] = true;
+        console.warn(`Failed to load image for user ${userId}`);
+    };
+    img.src = imageUrl;
+    
+    return imageUrl;
 }
 
 export function defaultImageURLForUser(userId: UserProfile['id']) {

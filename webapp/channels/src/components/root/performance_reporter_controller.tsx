@@ -15,8 +15,12 @@ export default function PerformanceReporterController() {
     const reporter = useRef<PerformanceReporter>();
 
     useEffect(() => {
+        // 404 오류를 방지하기 위해 성능 보고서 전송을 비활성화합니다.
+        // 이 기능이 필요한 경우 아래 코드를 주석 해제하세요.
+        /*
         reporter.current = new PerformanceReporter(Client4, store, DesktopAppAPI);
         reporter.current.observe();
+        */
 
         // There's no way to clean up web-vitals, so continue to assume that this component won't ever be unmounted
         return () => {
