@@ -218,15 +218,20 @@ const AtMentionSuggestion = React.forwardRef<HTMLLIElement, SuggestionProps<Item
             {icon}
             <span className='suggestion-list__ellipsis'>
                 <span className='suggestion-list__main'>
-                    {'@' + (item.first_name || itemname)}
+                    {/* 실제 이름을 우선하여 표시 */}
+                    {item.first_name && item.last_name ? 
+                        `@${item.first_name} ${item.last_name}` : 
+                        `@${itemname}`
+                    }
+                    {/* 특수 멘션이 아닌 경우에만 사번을 괄호안에 표시 */}
                     {item.username && item.username !== 'all' && item.username !== 'channel' && item.username !== 'here' && (
                         <span className='suggestion-list__employee-id'>{'(' + item.username + ')'}</span>
                     )}
-                    {item.hasDuplicates && !item.isDuplicateItem && (
+                    {/* {item.hasDuplicates && !item.isDuplicateItem && (
                         <span className='suggestion-list__duplicate-indicator'>
                             {`${item.duplicateCount}명의 동일 이름`}
                         </span>
-                    )}
+                    )} */}
                 </span>
                 {item.is_bot && <BotTag/>}
                 {youElement}

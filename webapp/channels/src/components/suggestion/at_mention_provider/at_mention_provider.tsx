@@ -507,14 +507,24 @@ export default class AtMentionProvider extends Provider {
         // Add the textboxId for each suggestions
         const modifiedItems = filteredItems.map((item) => {
             if (item.username) {
+                // 실제 이름(first_name, last_name)이 있으면 사용하고, 없으면 사번(username) 사용
+                const fullName = item.first_name && item.last_name ? `${item.first_name} ${item.last_name}` : '';
+                
+                // 디버깅용 로그
                 console.log('Profile details:', {
                     username: item.username,
                     first_name: item.first_name,
                     last_name: item.last_name,
-                    fullName: item.first_name && item.last_name ? `${item.first_name} ${item.last_name}` : '',
+                    fullName: fullName,
                     type: item.type
                 });
-                mentions.push('@' + item.username);
+                
+                // 실제 이름이 있으면 실제 이름을 표시하고, 없으면 사번 표시
+                if (fullName) {
+                    mentions.push('@' + fullName);
+                } else {
+                    mentions.push('@' + item.username);
+                }
             } else if (item.name) {
                 mentions.push('@' + item.name);
             } else {
