@@ -33,15 +33,19 @@ export default function UserProfile({
     overwriteIcon,
 }: Props) {
     let name: ReactNode;
-    if (user && displayUsername) {
-        // 사번 대신 실제 이름을 표시하도록 변경
+    // 항상 실제 이름을 표시하도록 수정
+    if (user) {
         const fullName = user.first_name && user.last_name ? 
             `${user.first_name} ${user.last_name}` : '';
         
-        // 실제 이름이 있으면 이름(사번) 형식으로 표시, 없으면 사번만 표시
-        name = fullName ? 
-            `${fullName} (@${user.username})` : 
-            `@${user.username}`;
+        // 실제 이름이 있으면 이름만 표시, 없으면 사번 표시
+        if (fullName) {
+            name = fullName;
+        } else if (displayUsername) {
+            name = `@${user.username}`;
+        } else {
+            name = overwriteName || displayName || '...';
+        }
     } else {
         name = overwriteName || displayName || '...';
     }
