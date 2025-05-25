@@ -137,13 +137,7 @@ const AtMentionSuggestion = React.forwardRef<HTMLLIElement, SuggestionProps<Item
             description = <span>@{item.username}{item.nickname ? ` (${item.nickname})` : ''}</span>;
         }
         
-        // 디버깅용 로그 추가
-        console.log('Profile for mention:', {
-            username: item.username,
-            fullName,
-            first_name: item.first_name,
-            last_name: item.last_name
-        });
+        // 사용자 프로필 정보
         
         // 중복 사용자 표시
         if (item.hasDuplicates) {

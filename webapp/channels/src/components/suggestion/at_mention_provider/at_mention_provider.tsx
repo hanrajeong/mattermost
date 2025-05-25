@@ -490,7 +490,7 @@ export default class AtMentionProvider extends Provider {
             
             // 진짜 동명이인이 있는 경우에만 표시 (동일 이름을 가진 사용자가 2명 이상일 때)
             if (fullName && sameNameCount > 1) {
-                console.log(`동독이인 발견: ${fullName}, 인원 수: ${sameNameCount}`);
+                // 동명이인 발견 시 처리
                 // 동명이인이 있는 경우 기존 형식대로 표시
                 return {
                     ...cleanItem,
@@ -502,7 +502,7 @@ export default class AtMentionProvider extends Provider {
             return cleanItem;
         });
         
-        console.log('Filtered items (removed duplicates and current user):', filteredItems);
+        // 필터링된 아이템 목록
         
         // Add the textboxId for each suggestions
         const modifiedItems = filteredItems.map((item) => {
@@ -511,13 +511,7 @@ export default class AtMentionProvider extends Provider {
                 const fullName = item.first_name && item.last_name ? `${item.first_name} ${item.last_name}` : '';
                 
                 // 디버깅용 로그
-                console.log('Profile details:', {
-                    username: item.username,
-                    first_name: item.first_name,
-                    last_name: item.last_name,
-                    fullName: fullName,
-                    type: item.type
-                });
+                // 사용자 프로필 정보
                 
                 // 실제 이름이 있으면 실제 이름을 표시하고, 없으면 사번 표시
                 if (fullName) {
