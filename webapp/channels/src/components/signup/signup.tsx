@@ -504,6 +504,7 @@ const Signup = ({onCustomizeHeader}: SignupProps) => {
                 await new Promise((resolve) => setTimeout(resolve, 1000));
                 
                 const addMemberResult = await dispatch(addChannelMember(channelId, userData.id));
+                if (addMemberResult.error) {
                     console.error('Failed to add user to channel:', addMemberResult.error);
                 } else {
                     console.log('Successfully added user to channel:', channelId);
