@@ -6,7 +6,7 @@
 CURR_DIR=$(pwd)
 PACKAGE_DIR="mattermost_package"
 TARGET_FILE="mattermost_closed_network.tar.gz"
-SPLIT_SIZE="1.9G"
+SPLIT_SIZE="1900M"
 
 echo "[📦] Mattermost 폐쇄망 배포 패키지 생성 시작..."
 
