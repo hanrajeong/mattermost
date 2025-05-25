@@ -22,6 +22,7 @@ export type Props = PropsFromRedux & OwnProps;
 export default function UserProfile({
     disablePopover = false,
     displayUsername = false,
+    displayFullName = false,
     hideStatus = false,
     overwriteName = '',
     colorize = false,
@@ -33,13 +34,13 @@ export default function UserProfile({
     overwriteIcon,
 }: Props) {
     let name: ReactNode;
-    // 항상 실제 이름을 표시하도록 수정
+    
     if (user) {
         const fullName = user.first_name && user.last_name ? 
             `${user.first_name} ${user.last_name}` : '';
         
-        // 실제 이름이 있으면 이름만 표시, 없으면 사번 표시
-        if (fullName) {
+        // displayFullName이 true이면 실제 이름을 우선적으로 표시
+        if (displayFullName && fullName) {
             name = fullName;
         } else if (displayUsername) {
             name = `@${user.username}`;

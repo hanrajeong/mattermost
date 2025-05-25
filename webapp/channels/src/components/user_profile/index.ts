@@ -20,6 +20,7 @@ export type OwnProps = {
     overwriteIcon?: string;
     disablePopover?: boolean;
     displayUsername?: boolean;
+    displayFullName?: boolean;
     colorize?: boolean;
     hideStatus?: boolean;
     channelId?: Channel['id'];

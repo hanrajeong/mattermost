@@ -55,7 +55,7 @@ const PostUserProfile = (props: Props): JSX.Element | null => {
                 userId={post.user_id}
                 channelId={post.channel_id}
                 colorize={colorize}
-                displayUsername={true}
+                displayFullName={true}
             />
         );
     }
@@ -66,7 +66,7 @@ const PostUserProfile = (props: Props): JSX.Element | null => {
                 userId={post.user_id}
                 channelId={post.channel_id}
                 colorize={colorize}
-                displayUsername={true}
+                displayFullName={true}
             />
         );
     } else {
@@ -75,7 +75,7 @@ const PostUserProfile = (props: Props): JSX.Element | null => {
                 userId={post.user_id}
                 channelId={post.channel_id}
                 colorize={colorize}
-                displayUsername={true}
+                displayFullName={true}
             />
         );
 
@@ -92,7 +92,7 @@ const PostUserProfile = (props: Props): JSX.Element | null => {
                     overwriteName={overwriteName}
                     colorize={colorize}
                     overwriteIcon={overwriteIcon}
-                    displayUsername={true}
+                    displayFullName={true}
                 />
             );
 
@@ -109,7 +109,7 @@ const PostUserProfile = (props: Props): JSX.Element | null => {
                         channelId={post.channel_id}
                         hideStatus={true}
                         colorize={colorize}
-                        displayUsername={true}
+                        displayFullName={true}
                     />
                 </span>
             );
@@ -130,7 +130,7 @@ const PostUserProfile = (props: Props): JSX.Element | null => {
                     channelId={post.channel_id}
                     hideStatus={true}
                     colorize={colorize}
-                    displayUsername={true}
+                    displayFullName={true}
                 />
             );
         } else if (isSystemMessage) {
@@ -144,7 +144,7 @@ const PostUserProfile = (props: Props): JSX.Element | null => {
                     disablePopover={true}
                     channelId={post.channel_id}
                     colorize={colorize}
-                    displayUsername={true}
+                    displayFullName={true}
                 />
             );
         }
