@@ -4,7 +4,8 @@
 import React from 'react';
 import styled from 'styled-components';
 
-import Logo from 'components/common/svg_images_components/logo_dark_blue_svg';
+// SVG 로고 대신 로컬 PNG 이미지 사용
+// import Logo from 'components/common/svg_images_components/logo_dark_blue_svg';
 
 const ProductBrandingTeamEditionContainer = styled.span`
     display: flex;
@@ -15,11 +16,25 @@ const ProductBrandingTeamEditionContainer = styled.span`
     }
 `;
 
-const StyledLogo = styled(Logo)`
-    path {
-        fill: rgba(var(--sidebar-text-rgb), 0.75);
-    }
+const CustomBrandName = styled.span`
+    color: rgba(var(--sidebar-text-rgb), 0.75);
+    font-family: 'Open Sans', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    margin-left: 8px;
 `;
+
+const CustomLogo = styled.img`
+    height: 24px;
+    width: auto;
+`;
+
+// SVG 로고 스타일링 제거
+// const StyledLogo = styled(Logo)`
+//     path {
+//         fill: rgba(var(--sidebar-text-rgb), 0.75);
+//     }
+// `;
 
 const Badge = styled.span`
     display: flex;
@@ -36,14 +51,17 @@ const Badge = styled.span`
     line-height: 16px;
 `;
 
+// 이미지 파일 임포트
+import kbLogoImage from './kblogo.png';
+
 const ProductBrandingTeamEdition = (): JSX.Element => {
     return (
         <ProductBrandingTeamEditionContainer tabIndex={-1}>
-            <StyledLogo
-                width={116}
-                height={20}
+            <CustomLogo 
+                src={kbLogoImage} 
+                alt="LinKB Logo"
             />
-            {/* FREE EDITION 배지 제거 */}
+            <CustomBrandName>LinKB</CustomBrandName>
         </ProductBrandingTeamEditionContainer>
     );
 };

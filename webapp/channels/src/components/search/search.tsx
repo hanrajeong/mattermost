@@ -295,10 +295,13 @@ const Search = ({
     const debouncedSearch = useCallback(
         debounce((term: string) => {
             if (term.trim().length > 0) {
-                handleSearch();
+                showSearchResults(isMentionSearch);
+                const teamId = searchTeam || currentChannel?.team_id;
+                updateSearchTeam(teamId);
+                trackEvent('ui', 'ui_rhs_search');
             }
         }, 500),
-        [handleSearch, searchTerms, searchTeam, currentChannel, isMentionSearch, showSearchResults, updateSearchTeam]
+        [showSearchResults, isMentionSearch, searchTeam, currentChannel, updateSearchTeam]
     );
 
     const handleChange = (e: ChangeEvent<HTMLInputElement>): void => {
@@ -308,6 +311,10 @@ const Search = ({
         // 검색어가 있을 경우 디바운스된 검색 실행
         if (term.trim().length > 0) {
             debouncedSearch(term);
+            // RHS를 열어서 검색 결과가 보이도록 함
+            if (!searchVisible) {
+                openRHSSearch();
+            }
         }
     };
 
