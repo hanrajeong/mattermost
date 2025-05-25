@@ -55,6 +55,7 @@ const PostUserProfile = (props: Props): JSX.Element | null => {
                 userId={post.user_id}
                 channelId={post.channel_id}
                 colorize={colorize}
+                displayUsername={true}
             />
         );
     }
@@ -65,6 +66,7 @@ const PostUserProfile = (props: Props): JSX.Element | null => {
                 userId={post.user_id}
                 channelId={post.channel_id}
                 colorize={colorize}
+                displayUsername={true}
             />
         );
     } else {
@@ -73,6 +75,7 @@ const PostUserProfile = (props: Props): JSX.Element | null => {
                 userId={post.user_id}
                 channelId={post.channel_id}
                 colorize={colorize}
+                displayUsername={true}
             />
         );
 
@@ -89,6 +92,7 @@ const PostUserProfile = (props: Props): JSX.Element | null => {
                     overwriteName={overwriteName}
                     colorize={colorize}
                     overwriteIcon={overwriteIcon}
+                    displayUsername={true}
                 />
             );
 
@@ -105,6 +109,7 @@ const PostUserProfile = (props: Props): JSX.Element | null => {
                         channelId={post.channel_id}
                         hideStatus={true}
                         colorize={colorize}
+                        displayUsername={true}
                     />
                 </span>
             );
@@ -125,6 +130,7 @@ const PostUserProfile = (props: Props): JSX.Element | null => {
                     channelId={post.channel_id}
                     hideStatus={true}
                     colorize={colorize}
+                    displayUsername={true}
                 />
             );
         } else if (isSystemMessage) {
@@ -138,6 +144,7 @@ const PostUserProfile = (props: Props): JSX.Element | null => {
                     disablePopover={true}
                     channelId={post.channel_id}
                     colorize={colorize}
+                    displayUsername={true}
                 />
             );
         }
