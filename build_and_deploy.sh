@@ -2,10 +2,16 @@
 
 # Build 옵션 확인
 BUILD_FLAG=false
+SERVER_FLAG=false
+REDHAT_COMPAT=false
+
 for arg in "$@"; do
     if [ "$arg" = "build" ]; then
         BUILD_FLAG=true
-        break
+    elif [ "$arg" = "server" ]; then
+        SERVER_FLAG=true
+    elif [ "$arg" = "redhat" ]; then
+        REDHAT_COMPAT=true
     fi
 done
 
@@ -38,6 +44,35 @@ if [ ! -z "$MATTERMOST_PID" ]; then
     echo "Mattermost process stopped"
 else
     echo "No Mattermost process found running"
+fi
+
+if [ "$SERVER_FLAG" = true ]; then
+    echo "Building server..."
+    cd server
+
+    # 서버 빌드 (RedHat 8.1 호환성 모드)
+    if [ "$REDHAT_COMPAT" = true ]; then
+        echo "Building server with RedHat 8.1 compatibility (static linking)..."
+        # 정적 링킹으로 빌드 (glibc 의존성 제거)
+        CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o ../bin/mattermost ./cmd/mattermost/main.go
+    else
+        echo "Building server normally..."
+        make build-linux
+    fi
+
+    # 빌드 결과 확인
+    if [ -f "../bin/mattermost" ]; then
+        echo "Server build completed successfully"
+        # 빌드된 바이너리 정보 출력
+        file ../bin/mattermost
+        echo "Dynamic dependencies:"
+        ldd ../bin/mattermost || echo "Not a dynamic executable (statically linked)"
+    else
+        echo "Error: Server build failed"
+        exit 1
+    fi
+
+    cd $MATTERMOST_ROOT
 fi
 
 if [ "$BUILD_FLAG" = true ]; then
@@ -96,6 +131,12 @@ sleep 5
 
 echo "Deploy completed! Server should be running now."
 echo "You can check the logs with: tail -f mattermost.log"
+echo ""
+echo "Build options:"
+echo "  ./build_and_deploy.sh build      - Build webapp"
+echo "  ./build_and_deploy.sh server     - Build server only"
+echo "  ./build_and_deploy.sh redhat     - Build with RedHat 8.1 compatibility"
+echo "  ./build_and_deploy.sh server redhat - Build server with RedHat 8.1 compatibility"
 
 # PostgreSQL 서버 상태 출력
 $PG_CTL status -D $PGDATA
