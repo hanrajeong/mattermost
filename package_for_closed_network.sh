@@ -77,15 +77,15 @@ echo "[🗜️] zip 파일 생성 중..."
 zip -r "$TARGET_FILE" "$PACKAGE_DIR"
 
 # 8. 분할 압축
-# echo "[🔄] ${SPLIT_SIZE} 단위로 분할 중..."
-# split -b "$SPLIT_SIZE" -d -a 3 "$TARGET_FILE" "${TARGET_FILE}.part"
+echo "[🔄] ${SPLIT_SIZE} 단위로 분할 중..."
+split -b "$SPLIT_SIZE" -d -a 3 "$TARGET_FILE" "${TARGET_FILE}.part"
 
 # 9. tar.gz 원본 삭제 (split 후)
 # rm "$TARGET_FILE"
 
 # 10. 결과 안내
-# PART_COUNT=$(ls -1 ${TARGET_FILE}.part* | wc -l)
-# TOTAL_SIZE=$(du -ch ${TARGET_FILE}.part* | grep total | cut -f1)
+PART_COUNT=$(ls -1 ${TARGET_FILE}.part* | wc -l)
+TOTAL_SIZE=$(du -ch ${TARGET_FILE}.part* | grep total | cut -f1)
 
 echo ""
 echo "✅ 패키징 완료!"
